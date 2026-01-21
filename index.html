@@ -2,264 +2,123 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The hours</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Hours</title>
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-  background:#f3f4f6;
-}
-h1{text-align:center;margin:20px 0}
-.card{
-  background:#fff;
-  margin:12px;
-  padding:16px;
-  border-radius:18px;
-}
-.btn{
-  width:100%;
-  padding:16px;
-  font-size:18px;
-  border:none;
-  border-radius:16px;
-  background:#4b83b6;
-  color:#fff;
-}
-.btn.red{background:#d85a4a}
-.tabs{
-  display:flex;
-  gap:8px;
-  padding:0 12px;
-}
-.tabs button{
-  flex:1;
-  padding:12px;
-  border:none;
-  border-radius:14px;
-  background:#e5e7eb;
-}
-.tabs button.active{
-  background:#4b83b6;
-  color:#fff;
-}
+body{margin:0;background:#f3f4f6;font-family:system-ui}
+h1{text-align:center}
+.card{background:#fff;margin:12px;padding:16px;border-radius:16px}
+.btn{width:100%;padding:16px;font-size:18px;border:none;border-radius:14px;background:#4b83b6;color:#fff}
+.tabs{display:flex;gap:6px;margin:0 12px}
+.tabs button{flex:1;padding:12px;border:none;border-radius:12px;background:#e5e7eb}
+.tabs .active{background:#4b83b6;color:#fff}
+.mon{display:flex;gap:10px;align-items:center;margin:8px 0}
+.mon img{width:56px;height:56px;border-radius:12px;object-fit:cover}
 .hidden{display:none}
-
-.mon{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin:8px 0;
-}
-.mon img{
-  width:56px;
-  height:56px;
-  border-radius:12px;
-  object-fit:cover;
-}
-.mon button{
-  border:none;
-  border-radius:10px;
-  padding:6px 10px;
-}
-
-.set-img{
-  width:80px;
-  height:80px;
-  border-radius:16px;
-  object-fit:cover;
-  margin-top:8px;
-}
-
-.slot{
-  background:#111;
-  color:red;
-  font-size:40px;
-  text-align:center;
-  padding:20px;
-  border-radius:14px;
-}
-small{color:#666}
 </style>
 </head>
 
 <body>
 
-<h1>The hours</h1>
+<h1>The Hours</h1>
 
 <div class="card">
-  金貨: <span id="money">0</span><br>
-  収益: <span id="income">0</span> / 秒<br>
-  セット中: <span id="setName">なし</span><br>
-  <img id="setImg" class="set-img hidden">
+金貨：<span id="money">0</span><br>
+収益：<span id="income">0</span>/秒<br>
+セット中：<span id="setName">なし</span>
 </div>
 
 <div class="card">
-  <button class="btn" id="getBtn">GETする</button>
-  <div id="cool" style="text-align:center;margin-top:8px"></div>
+<button class="btn" onclick="getMonster()">GETする</button>
 </div>
 
 <div class="tabs">
-  <button class="active" onclick="openTab('store',this)">倉庫</button>
-  <button onclick="openTab('shop',this)">ショップ</button>
-  <button onclick="openTab('slot',this)">スロット</button>
+<button class="active" onclick="openTab('store',this)">倉庫</button>
+<button onclick="openTab('dex',this)">図鑑</button>
 </div>
 
 <div id="store" class="card">
-  <h3>倉庫 (<span id="count">0</span>/<span id="max">5</span>)</h3>
-  <div id="list"></div>
+<h3>倉庫</h3>
+<div id="storeList"></div>
 </div>
 
-<div id="shop" class="card hidden">
-  <h3>ショップ</h3>
-  <button class="btn" onclick="expand()">倉庫拡張 +1 (5000)</button>
-</div>
-
-<div id="slot" class="card hidden">
-  <h3>スロット</h3>
-  <div class="slot" id="slotView">???</div>
-  <button class="btn red" onclick="spin()">回す（100,000）</button>
+<div id="dex" class="card hidden">
+<h3>モンスター図鑑（64体）</h3>
+<div id="dexList"></div>
 </div>
 
 <script>
-let money=0;
-let monsters=[];
-let income=0;
-let set=null;
-let max=5;
-let nextGet=0;
+let money=0,income=0,set=null;
+let store=[];
 
-// AI絵キャラ画像（例）
-const images={
-  白弱:"https://images.unsplash.com/photo-1611605698323-b1e99cfd37ea",
-  白中:"https://images.unsplash.com/photo-1607746882042-944635dfe10e",
-  白強:"https://images.unsplash.com/photo-1527980965255-d3b416303d12",
-  銀弱:"https://images.unsplash.com/photo-1506794778202-cad84cf45f1d",
-  銀中:"https://images.unsplash.com/photo-1544723795-3fb6469f5b39",
-  銀強:"https://images.unsplash.com/photo-1547425260-76bcadfb4f2c",
-  金弱:"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
-  金中:"https://images.unsplash.com/photo-1539571696357-5a69c17a67c6",
-  金強:"https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e"
-};
-
+// ===== モンスター64体定義 =====
 const races=[
-  {name:"弱",rate:1},
-  {name:"中",rate:1.5},
-  {name:"強",rate:2}
-];
-const colors=[
-  {name:"白",rate:1},
-  {name:"銀",rate:1.5},
-  {name:"金",rate:3}
+"スライム","けもの","ドラゴン","あくま",
+"アンデッド","マシン","しょくぶつ","エレメント"
 ];
 
-function save(){
-  localStorage.setItem("hours_ai",JSON.stringify({
-    money,monsters,set,max,nextGet
-  }));
-}
-function load(){
-  const d=JSON.parse(localStorage.getItem("hours_ai"));
-  if(!d)return;
-  money=d.money;
-  monsters=d.monsters;
-  set=d.set;
-  max=d.max;
-  nextGet=d.nextGet;
-}
-
-function update(){
-  document.getElementById("money").textContent=Math.floor(money);
-  document.getElementById("income").textContent=income;
-  document.getElementById("count").textContent=monsters.length;
-  document.getElementById("max").textContent=max;
-
-  const list=document.getElementById("list");
-  list.innerHTML="";
-  monsters.forEach((m,i)=>{
-    const d=document.createElement("div");
-    d.className="mon";
-    d.innerHTML=`
-      <img src="${m.img}">
-      <div>
-        ${m.name}<br>
-        力: ${m.power}
-      </div>
-      <button onclick="equip(${i})">セット</button>
-      <button onclick="drop(${i})">捨て</button>
-    `;
-    list.appendChild(d);
-  });
-
-  if(set){
-    document.getElementById("setName").textContent=set.name;
-    const img=document.getElementById("setImg");
-    img.src=set.img;
-    img.classList.remove("hidden");
+const monsters=[];
+let id=0;
+races.forEach(r=>{
+  for(let i=1;i<=8;i++){
+    monsters.push({
+      id:id++,
+      name:`${r}★${i}`,
+      race:r,
+      star:i,
+      power:i*10,
+      img:"https://via.placeholder.com/128?text="+encodeURIComponent(r+"★"+i)
+    });
   }
+});
 
-  const now=Date.now();
-  document.getElementById("cool").textContent=
-    now<nextGet?`あと ${Math.ceil((nextGet-now)/60000)} 分`:"GET可能";
-}
-
+// ===== 処理 =====
 function getMonster(){
-  if(Date.now()<nextGet)return;
-  if(monsters.length>=max)return alert("倉庫いっぱい");
-  nextGet=Date.now()+3600000;
-
-  const race=races[Math.floor(Math.random()*races.length)];
-  const color=colors[Math.floor(Math.random()*colors.length)];
-  const iv=Math.floor(Math.random()*100)+1;
-  const power=Math.floor(iv*race.rate*color.rate);
-  const key=color.name+race.name;
-
-  monsters.push({
-    name:`${color.name}${race.name}モンスター`,
-    power,
-    img:images[key]
-  });
-  save();update();
+  const m=monsters[Math.floor(Math.random()*monsters.length)];
+  store.push({...m});
+  render();
 }
-
 function equip(i){
-  set=monsters[i];
+  set=store[i];
   income=set.power;
-  save();update();
+  document.getElementById("setName").textContent=set.name;
 }
-function drop(i){
-  monsters.splice(i,1);
-  save();update();
-}
-function expand(){
-  if(money<5000)return alert("お金不足");
-  money-=5000;
-  max++;
-  save();update();
-}
-function spin(){
-  if(money<100000)return alert("お金不足");
-  money-=100000;
-  const r=Math.random();
-  let win=r<0.01?50000000:r<0.05?6000000:r<0.2?2000000:800000;
-  money+=win;
-  document.getElementById("slotView").textContent=win;
-  update();
-}
-function openTab(id,b){
-  ["store","shop","slot"].forEach(t=>{
-    document.getElementById(t).classList.add("hidden");
+function render(){
+  document.getElementById("money").textContent=money;
+  document.getElementById("income").textContent=income;
+
+  const s=document.getElementById("storeList");
+  s.innerHTML="";
+  store.forEach((m,i)=>{
+    s.innerHTML+=`
+    <div class="mon">
+      <img src="${m.img}">
+      <div>${m.name}<br>力:${m.power}</div>
+      <button onclick="equip(${i})">セット</button>
+    </div>`;
   });
+
+  const d=document.getElementById("dexList");
+  d.innerHTML="";
+  monsters.forEach(m=>{
+    d.innerHTML+=`
+    <div class="mon">
+      <img src="${m.img}">
+      <div>${m.name}</div>
+    </div>`;
+  });
+}
+
+function openTab(id,b){
+  document.getElementById("store").classList.add("hidden");
+  document.getElementById("dex").classList.add("hidden");
   document.getElementById(id).classList.remove("hidden");
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
 }
 
-document.getElementById("getBtn").onclick=getMonster;
-
-load();update();
-setInterval(()=>{money+=income;update()},1000);
+setInterval(()=>{money+=income;render()},1000);
+render();
 </script>
 
 </body>
