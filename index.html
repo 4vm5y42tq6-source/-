@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>モンスター放置コイン＋スロット</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #1b263b;
+  color: #fff;
+}
+
+.box {
+  background: #415a77;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.slot {
+  font-size: 40px;
+  margin: 10px;
+}
+
+button {
+  font-size: 16px;
+  padding: 10px;
+  margin-top: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🐲 モンスター放置コイン</h1>
+
+<p>💰 コイン：<span id="coin">0</span></p>
+<p>⏱ 毎秒：<span id="power">0</span></p>
+
+<div class="box">
+  <h2>🟢 スライム</h2>
+  <p>数：<span id="slime">0</span>（+1/秒）</p>
+  <button onclick="buySlime()">買う（10）</button>
+</div>
+
+<div class="box">
+  <h2>🟤 ゴブリン</h2>
+  <p>数：<span id="goblin">0</span>（+5/秒）</p>
+  <button onclick="buyGoblin()">買う（50）</button>
+</div>
+
+<div class="box">
+  <h2>🔴 ドラゴン</h2>
+  <p>数：<span id="dragon">0</span>（+20/秒）</p>
+  <button onclick="buyDragon()">買う（200）</button>
+</div>
+
+<div class="box">
+  <h2>🎰 スロット</h2>
+  <div class="slot">
+    <span id="s1">❓</span>
+    <span id="s2">❓</span>
+    <span id="s3">❓</span>
+  </div>
+  <button onclick="spin()">回す（10コイン）</button>
+  <p id="result"></p>
+</div>
+
+<script>
+let coin = 0;
+let slime = 0;
+let goblin = 0;
+let dragon = 0;
+
+const symbols = ["🟢","🟤","🔴"];
+
+// 放置収入
+setInterval(() => {
+  let power = slime * 1 + goblin * 5 + dragon * 20;
+  coin += power;
+  update();
+}, 1000);
+
+// モンスター購入
+function buySlime() {
+  if (coin >= 10) { coin -= 10; slime++; update(); }
+}
+function buyGoblin() {
+  if (coin >= 50) { coin -= 50; goblin++; update(); }
+}
+function buyDragon() {
+  if (coin >= 200) { coin -= 200; dragon++; update(); }
+}
+
+// スロット
+function spin() {
+  if (coin < 10) {
+    document.getElementById("result").textContent = "コインが足りない！";
+    return;
+  }
+
+  coin -= 10;
+
+  let a = symbols[Math.floor(Math.random()*3)];
+  let b = symbols[Math.floor(Math.random()*3)];
+  let c = symbols[Math.floor(Math.random()*3)];
+
+  document.getElementById("s1").textContent = a;
+  document.getElementById("s2").textContent = b;
+  document.getElementById("s3").textContent = c;
+
+  if (a === b && b === c) {
+    let win = a === "🔴" ? 200 : a === "🟤" ? 50 : 20;
+    coin += win;
+    document.getElementById("result").textContent =
+      "🎉 大当たり！ +" + win + "コイン";
+  } else {
+    document.getElementById("result").textContent = "はずれ…";
+  }
+
+  update();
+}
+
+function update() {
+  document.getElementById("coin").textContent = coin;
+  document.getElementById("slime").textContent = slime;
+  document.getElementById("goblin").textContent = goblin;
+  document.getElementById("dragon").textContent = dragon;
+  document.getElementById("power").textContent =
+    slime * 1 + goblin * 5 + dragon * 20;
+}
+</script>
+
+</body>
+</html>
