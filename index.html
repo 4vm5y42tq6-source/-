@@ -3,213 +3,226 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Hours</title>
+<title>The hours</title>
 
 <style>
 body {
-  margin:0;
-  font-family: system-ui;
-  background:#f2f2f2;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f4f6f8;
+  color: #333;
 }
+
 header {
-  background:#ffffff;
-  padding:14px;
-  text-align:center;
-  font-size:20px;
-  font-weight:bold;
+  padding: 20px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
 }
-.box {
-  background:#fff;
-  margin:12px;
-  padding:12px;
-  border-radius:12px;
-}
-button {
-  width:100%;
-  padding:14px;
-  font-size:18px;
-  border:none;
-  border-radius:12px;
-}
-#getBtn {
-  background:#bbb;
-  color:white;
-}
-.active {
-  background:#2e7dff !important;
+
+.tab {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px;
 }
 .tab button {
-  width:24%;
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #e5e7eb;
+  font-size: 16px;
 }
-.monster {
-  display:flex;
-  gap:10px;
-  margin-bottom:12px;
+.tab button.active {
+  background: #4b83b6;
+  color: #fff;
 }
-.monster img {
-  width:72px;
-  height:72px;
-  border-radius:10px;
+
+.box {
+  margin: 15px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
 }
-.small {
-  font-size:12px;
-  color:#666;
+
+.big-btn {
+  width: 100%;
+  padding: 18px;
+  font-size: 20px;
+  border-radius: 16px;
+  border: none;
+  background: #4b83b6;
+  color: white;
+}
+
+.red-btn {
+  background: #d85a4a;
+}
+
+.green-btn {
+  background: #5fb26a;
+}
+
+.slot {
+  background: #333;
+  color: red;
+  font-size: 40px;
+  text-align: center;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+small {
+  color: #666;
 }
 </style>
 </head>
 
 <body>
 
-<header>The Hours</header>
+<header>The hours</header>
 
 <div class="box">
-💰 金貨：<span id="gold">0</span><br>
-⏱ 収益：<span id="income">0</span>/秒
+  <div>金貨: <span id="money">0</span></div>
+  <div>収益: <span id="income">0</span> / 秒</div>
+  <div>セット中: <span id="setMonster">なし</span></div>
+  <div>累計ログイン日数: <span id="login">1</span> 日</div>
 </div>
 
 <div class="box">
-次のGETまで<br>
-<b id="timer">--:--</b>
-<button id="getBtn">GETする</button>
+  <button id="getBtn" class="big-btn">GETする</button>
+  <div id="cooldown" style="text-align:center;margin-top:8px;"></div>
 </div>
 
-<div class="box tab">
-<button onclick="showTab('warehouse')">倉庫</button>
-<button onclick="showTab('set')">セット</button>
-<button onclick="showTab('dex')">図鑑</button>
-<button onclick="showTab('help')">説明</button>
+<div class="tab">
+  <button onclick="showTab('warehouse')" class="active">倉庫</button>
+  <button onclick="showTab('shop')">ショップ</button>
+  <button onclick="showTab('book')">図鑑</button>
+  <button onclick="showTab('slot')">スロット</button>
 </div>
 
-<div class="box" id="content"></div>
+<!-- 倉庫 -->
+<div id="warehouse" class="box">
+  <h3>倉庫</h3>
+  <div id="monsters"></div>
+</div>
+
+<!-- ショップ -->
+<div id="shop" class="box hidden">
+  <h3>ショップ</h3>
+  <button onclick="buySlot()" class="big-btn">スロット解放（無料）</button>
+</div>
+
+<!-- 図鑑 -->
+<div id="book" class="box hidden">
+  <h3>遊び方</h3>
+  <small>
+    ・1時間に1回GETできる<br>
+    ・モンスターをセットするとお金が増える<br>
+    ・いらないモンスターは捨てよう
+  </small>
+</div>
+
+<!-- スロット -->
+<div id="slot" class="box hidden">
+  <h3>運試しスロット</h3>
+  <div class="slot" id="slotView">???</div>
+  <div style="text-align:center">1回：100,000円</div>
+  <button onclick="spin()" class="big-btn red-btn">レバーを叩く！</button>
+</div>
 
 <script>
-const monsterDB = [
- {name:"スライム", img:"images/slime.png", base:1},
- {name:"レッドスライム", img:"images/red_slime.png", base:2},
- {name:"ドラキー", img:"images/dracky.png", base:3},
- {name:"ゴブリン", img:"images/goblin.png", base:4},
- {name:"キメラ", img:"images/chimera.png", base:6},
- {name:"ゴーレム", img:"images/golem.png", base:8},
- {name:"ドラゴン", img:"images/dragon.png", base:15, rare:true},
- {name:"メタルスライム", img:"images/metal_slime.png", base:25, rare:true}
-];
+let money = 0;
+let income = 0;
+let monsters = [];
+let nextGet = 0;
 
-let data = JSON.parse(localStorage.getItem("hours")) || {
- gold:0,
- monsters:[],
- set:null,
- lastGet:0,
- lastTime:Date.now()
-};
-
-function save(){ localStorage.setItem("hours",JSON.stringify(data)); }
-
-function updateIncome(){
- if(!data.set){ income.textContent=0; return; }
- income.textContent = data.set.power.toFixed(1);
+function save() {
+  localStorage.setItem("game", JSON.stringify({
+    money, monsters, nextGet
+  }));
 }
 
-function tick(){
- const now = Date.now();
- const diff = (now - data.lastTime)/1000;
- if(data.set){
-   data.gold += diff * data.set.power;
- }
- data.lastTime = now;
- gold.textContent = Math.floor(data.gold);
- save();
-}
-setInterval(tick,1000);
-
-function updateTimer(){
- const remain = 3600000 - (Date.now() - data.lastGet);
- if(remain<=0){
-   timer.textContent="GET可能";
-   getBtn.classList.add("active");
- } else {
-   const m = Math.floor(remain/60000);
-   const s = Math.floor((remain%60000)/1000);
-   timer.textContent=`${m}:${s.toString().padStart(2,"0")}`;
- }
-}
-setInterval(updateTimer,1000);
-
-getBtn.onclick = ()=>{
- if(Date.now()-data.lastGet < 3600000) return;
-
- const m = monsterDB[Math.floor(Math.random()*monsterDB.length)];
- const iv = Math.floor(Math.random()*100)+1;
- const color = ["青","赤","金","銀"][Math.floor(Math.random()*4)];
- let power = m.base * iv;
-
- if(color==="金") power*=2;
- if(color==="銀") power*=1.5;
- if(m.rare) power*=3;
-
- data.monsters.push({
-  ...m,
-  iv,
-  color,
-  power
- });
-
- data.lastGet = Date.now();
- save();
- alert(`${m.name}をGET！`);
-};
-
-function showTab(tab){
- const c = content;
- c.innerHTML="";
-
- if(tab==="warehouse"){
-   data.monsters.forEach((m,i)=>{
-     const d=document.createElement("div");
-     d.className="monster";
-     d.innerHTML=`
-     <img src="${m.img}">
-     <div>
-     <b>${m.color} ${m.name}</b><br>
-     個体値:${m.iv}<br>
-     収益:${m.power.toFixed(1)}<br>
-     <button onclick="setMonster(${i})">セット</button>
-     </div>`;
-     c.appendChild(d);
-   });
- }
-
- if(tab==="set"){
-   c.innerHTML = data.set
-    ? `<b>${data.set.color} ${data.set.name}</b><br>収益:${data.set.power.toFixed(1)}`
-    : "未セット";
- }
-
- if(tab==="dex"){
-   monsterDB.forEach(m=>{
-     c.innerHTML += `<div>${m.name}${m.rare?" 🌟":""}</div>`;
-   });
- }
-
- if(tab==="help"){
-   c.innerHTML = `
-   ・1時間に1回GET<br>
-   ・倉庫は無限<br>
-   ・セット中のみ収益発生<br>
-   ・レアモンスターは超高収益<br>
-   ・オフライン中も収益が貯まる
-   `;
- }
+function load() {
+  const data = JSON.parse(localStorage.getItem("game"));
+  if (!data) return;
+  money = data.money;
+  monsters = data.monsters;
+  nextGet = data.nextGet;
 }
 
-function setMonster(i){
- data.set = data.monsters[i];
- updateIncome();
- save();
- alert("セット完了！");
+function updateUI() {
+  document.getElementById("money").textContent = Math.floor(money);
+  document.getElementById("income").textContent = income;
+  const list = document.getElementById("monsters");
+  list.innerHTML = "";
+  monsters.forEach((m, i) => {
+    const d = document.createElement("div");
+    d.innerHTML = `
+      ${m.name}（${m.power}）
+      <button onclick="setMonster(${i})">セット</button>
+      <button onclick="removeMonster(${i})">捨てる</button>
+    `;
+    list.appendChild(d);
+  });
 }
 
-updateIncome();
-showTab("warehouse");
+function getMonster() {
+  const now = Date.now();
+  if (now < nextGet) return;
+  nextGet = now + 3600000;
+  const power = Math.floor(Math.random() * 100) + 1;
+  monsters.push({ name: "モンスター", power });
+  save();
+  updateUI();
+}
+
+function setMonster(i) {
+  income = monsters[i].power;
+  document.getElementById("setMonster").textContent = monsters[i].name;
+}
+
+function removeMonster(i) {
+  monsters.splice(i, 1);
+  save();
+  updateUI();
+}
+
+function showTab(id) {
+  ["warehouse","shop","book","slot"].forEach(t=>{
+    document.getElementById(t).classList.add("hidden");
+  });
+  document.getElementById(id).classList.remove("hidden");
+
+  document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+}
+
+function spin() {
+  if (money < 100000) return alert("お金が足りない！");
+  money -= 100000;
+  const r = Math.random();
+  if (r < 0.01) money += 50000000;
+  else if (r < 0.05) money += 6300000;
+  else if (r < 0.2) money += 1900000;
+  else money += 800000;
+  updateUI();
+}
+
+document.getElementById("getBtn").onclick = getMonster;
+
+load();
+updateUI();
+
+setInterval(()=>{
+  money += income;
+  updateUI();
+},1000);
 </script>
 
 </body>
