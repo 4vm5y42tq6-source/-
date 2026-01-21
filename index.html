@@ -6,223 +6,241 @@
 <title>The hours</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f4f6f8;
-  color: #333;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  background:#f3f4f6;
 }
-
-header {
-  padding: 20px;
-  text-align: center;
-  font-size: 28px;
-  font-weight: bold;
+h1{text-align:center;margin:20px 0}
+.card{
+  background:#fff;
+  margin:12px;
+  padding:16px;
+  border-radius:18px;
 }
-
-.tab {
-  display: flex;
-  gap: 8px;
-  padding: 0 10px;
+.btn{
+  width:100%;
+  padding:16px;
+  font-size:18px;
+  border:none;
+  border-radius:16px;
+  background:#4b83b6;
+  color:#fff;
 }
-.tab button {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  background: #e5e7eb;
-  font-size: 16px;
+.btn.red{background:#d85a4a}
+.btn.gray{background:#9ca3af}
+.tabs{
+  display:flex;
+  gap:8px;
+  padding:0 12px;
 }
-.tab button.active {
-  background: #4b83b6;
-  color: #fff;
+.tabs button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:14px;
+  background:#e5e7eb;
 }
-
-.box {
-  margin: 15px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px;
+.tabs button.active{
+  background:#4b83b6;
+  color:#fff;
 }
-
-.big-btn {
-  width: 100%;
-  padding: 18px;
-  font-size: 20px;
-  border-radius: 16px;
-  border: none;
-  background: #4b83b6;
-  color: white;
+.hidden{display:none}
+.mon{
+  display:flex;
+  justify-content:space-between;
+  margin:6px 0;
+  gap:6px;
 }
-
-.red-btn {
-  background: #d85a4a;
+.mon button{
+  border:none;
+  border-radius:10px;
+  padding:6px 10px;
 }
-
-.green-btn {
-  background: #5fb26a;
+.slot{
+  background:#111;
+  color:red;
+  font-size:40px;
+  text-align:center;
+  padding:20px;
+  border-radius:14px;
 }
-
-.slot {
-  background: #333;
-  color: red;
-  font-size: 40px;
-  text-align: center;
-  padding: 20px;
-  border-radius: 16px;
-  margin-bottom: 10px;
-}
-
-.hidden {
-  display: none;
-}
-
-small {
-  color: #666;
-}
+small{color:#666}
 </style>
 </head>
 
 <body>
 
-<header>The hours</header>
+<h1>The hours</h1>
 
-<div class="box">
-  <div>金貨: <span id="money">0</span></div>
-  <div>収益: <span id="income">0</span> / 秒</div>
-  <div>セット中: <span id="setMonster">なし</span></div>
-  <div>累計ログイン日数: <span id="login">1</span> 日</div>
+<div class="card">
+  金貨: <span id="money">0</span><br>
+  収益: <span id="income">0</span> / 秒<br>
+  セット中: <span id="setName">なし</span><br>
+  累計ログイン: <span id="login">1</span> 日
 </div>
 
-<div class="box">
-  <button id="getBtn" class="big-btn">GETする</button>
-  <div id="cooldown" style="text-align:center;margin-top:8px;"></div>
+<div class="card">
+  <button class="btn" id="getBtn">GETする</button>
+  <div id="cool" style="text-align:center;margin-top:8px"></div>
 </div>
 
-<div class="tab">
-  <button onclick="showTab('warehouse')" class="active">倉庫</button>
-  <button onclick="showTab('shop')">ショップ</button>
-  <button onclick="showTab('book')">図鑑</button>
-  <button onclick="showTab('slot')">スロット</button>
+<div class="tabs">
+  <button class="active" onclick="openTab('store',this)">倉庫</button>
+  <button onclick="openTab('shop',this)">ショップ</button>
+  <button onclick="openTab('book',this)">図鑑</button>
+  <button onclick="openTab('slot',this)">スロット</button>
 </div>
 
-<!-- 倉庫 -->
-<div id="warehouse" class="box">
-  <h3>倉庫</h3>
-  <div id="monsters"></div>
+<div id="store" class="card">
+  <h3>倉庫 (<span id="count">0</span>/<span id="max">5</span>)</h3>
+  <div id="list"></div>
 </div>
 
-<!-- ショップ -->
-<div id="shop" class="box hidden">
+<div id="shop" class="card hidden">
   <h3>ショップ</h3>
-  <button onclick="buySlot()" class="big-btn">スロット解放（無料）</button>
+  <button class="btn" onclick="expand()">倉庫拡張 +1 (5000)</button>
 </div>
 
-<!-- 図鑑 -->
-<div id="book" class="box hidden">
+<div id="book" class="card hidden">
   <h3>遊び方</h3>
   <small>
-    ・1時間に1回GETできる<br>
-    ・モンスターをセットするとお金が増える<br>
-    ・いらないモンスターは捨てよう
+  ・1時間に1回GET<br>
+  ・強いモンスターほど収益UP<br>
+  ・金色は超レア
   </small>
 </div>
 
-<!-- スロット -->
-<div id="slot" class="box hidden">
-  <h3>運試しスロット</h3>
+<div id="slot" class="card hidden">
+  <h3>スロット</h3>
   <div class="slot" id="slotView">???</div>
-  <div style="text-align:center">1回：100,000円</div>
-  <button onclick="spin()" class="big-btn red-btn">レバーを叩く！</button>
+  <button class="btn red" onclick="spin()">回す（100,000）</button>
 </div>
 
 <script>
-let money = 0;
-let income = 0;
-let monsters = [];
-let nextGet = 0;
+let money=0;
+let monsters=[];
+let income=0;
+let set=null;
+let max=5;
+let nextGet=0;
+let login=1;
 
-function save() {
-  localStorage.setItem("game", JSON.stringify({
-    money, monsters, nextGet
+const races=[
+  {name:"弱",rate:1},
+  {name:"中",rate:1.5},
+  {name:"強",rate:2}
+];
+const colors=[
+  {name:"白",rate:1},
+  {name:"銀",rate:1.5},
+  {name:"金",rate:3}
+];
+
+function save(){
+  localStorage.setItem("hours",JSON.stringify({
+    money,monsters,set,max,nextGet,login
   }));
 }
 
-function load() {
-  const data = JSON.parse(localStorage.getItem("game"));
-  if (!data) return;
-  money = data.money;
-  monsters = data.monsters;
-  nextGet = data.nextGet;
+function load(){
+  const d=JSON.parse(localStorage.getItem("hours"));
+  if(!d)return;
+  money=d.money;
+  monsters=d.monsters;
+  set=d.set;
+  max=d.max;
+  nextGet=d.nextGet;
+  login=d.login;
 }
 
-function updateUI() {
-  document.getElementById("money").textContent = Math.floor(money);
-  document.getElementById("income").textContent = income;
-  const list = document.getElementById("monsters");
-  list.innerHTML = "";
-  monsters.forEach((m, i) => {
-    const d = document.createElement("div");
-    d.innerHTML = `
-      ${m.name}（${m.power}）
-      <button onclick="setMonster(${i})">セット</button>
-      <button onclick="removeMonster(${i})">捨てる</button>
+function update(){
+  document.getElementById("money").textContent=Math.floor(money);
+  document.getElementById("income").textContent=income;
+  document.getElementById("count").textContent=monsters.length;
+  document.getElementById("max").textContent=max;
+  document.getElementById("setName").textContent=set?set.name:"なし";
+
+  const l=document.getElementById("list");
+  l.innerHTML="";
+  monsters.forEach((m,i)=>{
+    const d=document.createElement("div");
+    d.className="mon";
+    d.innerHTML=`
+      ${m.name} (${m.power})
+      <button onclick="equip(${i})">セット</button>
+      <button onclick="drop(${i})">捨て</button>
     `;
-    list.appendChild(d);
+    l.appendChild(d);
   });
+
+  const now=Date.now();
+  document.getElementById("cool").textContent=
+    now<nextGet?`あと ${Math.ceil((nextGet-now)/60000)} 分`:"GET可能";
 }
 
-function getMonster() {
-  const now = Date.now();
-  if (now < nextGet) return;
-  nextGet = now + 3600000;
-  const power = Math.floor(Math.random() * 100) + 1;
-  monsters.push({ name: "モンスター", power });
-  save();
-  updateUI();
+function getMonster(){
+  if(Date.now()<nextGet)return;
+  if(monsters.length>=max)return alert("倉庫いっぱい");
+  nextGet=Date.now()+3600000;
+
+  const race=races[Math.floor(Math.random()*races.length)];
+  const color=colors[Math.floor(Math.random()*colors.length)];
+  const iv=Math.floor(Math.random()*100)+1;
+  const power=Math.floor(iv*race.rate*color.rate);
+
+  monsters.push({
+    name:`${color.name}${race.name}モンスター`,
+    power
+  });
+  save();update();
 }
 
-function setMonster(i) {
-  income = monsters[i].power;
-  document.getElementById("setMonster").textContent = monsters[i].name;
+function equip(i){
+  set=monsters[i];
+  income=set.power;
+  save();update();
 }
 
-function removeMonster(i) {
-  monsters.splice(i, 1);
-  save();
-  updateUI();
+function drop(i){
+  monsters.splice(i,1);
+  save();update();
 }
 
-function showTab(id) {
-  ["warehouse","shop","book","slot"].forEach(t=>{
+function expand(){
+  if(money<5000)return alert("お金不足");
+  money-=5000;
+  max++;
+  save();update();
+}
+
+function spin(){
+  if(money<100000)return alert("お金不足");
+  money-=100000;
+  const r=Math.random();
+  let win=0;
+  if(r<0.01)win=50000000;
+  else if(r<0.05)win=6000000;
+  else if(r<0.2)win=2000000;
+  else win=800000;
+  money+=win;
+  document.getElementById("slotView").textContent=win;
+  update();
+}
+
+function openTab(id,b){
+  ["store","shop","book","slot"].forEach(t=>{
     document.getElementById(t).classList.add("hidden");
   });
   document.getElementById(id).classList.remove("hidden");
-
-  document.querySelectorAll(".tab button").forEach(b=>b.classList.remove("active"));
-  event.target.classList.add("active");
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
 }
 
-function spin() {
-  if (money < 100000) return alert("お金が足りない！");
-  money -= 100000;
-  const r = Math.random();
-  if (r < 0.01) money += 50000000;
-  else if (r < 0.05) money += 6300000;
-  else if (r < 0.2) money += 1900000;
-  else money += 800000;
-  updateUI();
-}
+document.getElementById("getBtn").onclick=getMonster;
 
-document.getElementById("getBtn").onclick = getMonster;
-
-load();
-updateUI();
-
-setInterval(()=>{
-  money += income;
-  updateUI();
-},1000);
+load();update();
+setInterval(()=>{money+=income;update()},1000);
 </script>
 
 </body>
