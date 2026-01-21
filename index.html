@@ -2,212 +2,322 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>モンスター放置コインRPG</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The hours</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body {
-  font-family: sans-serif;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f2f4f7;
+}
+
+header {
+  padding: 15px;
   text-align: center;
-  background: #1b263b;
-  color: #fff;
+  font-size: 26px;
+  font-weight: bold;
+  background: white;
 }
 
-h1 {
-  margin-top: 10px;
-}
-
-.box {
-  background: #415a77;
+.status {
+  background: #eee;
   margin: 10px;
   padding: 10px;
   border-radius: 10px;
 }
 
-.monster {
-  font-size: 50px;
+.big {
+  margin: 10px;
+  text-align: center;
 }
 
-button {
-  font-size: 16px;
-  padding: 10px;
-  margin-top: 5px;
+.big button {
+  width: 100%;
+  font-size: 24px;
+  padding: 15px;
+  border-radius: 15px;
+  border: none;
 }
+
+.big button:disabled {
+  background: #ccc;
+}
+
+.tabs {
+  display: flex;
+  gap: 5px;
+  margin: 10px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+}
+
+.tabs button.active {
+  background: #2b7bb9;
+  color: white;
+}
+
+.tab {
+  display: none;
+  margin: 10px;
+}
+
+.tab.active {
+  display: block;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.monster {
+  text-align: center;
+}
+
+.monster img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+}
+
+.rare { color: gold; font-weight: bold; }
+.super { color: crimson; font-weight: bold; }
 
 .slot {
   font-size: 40px;
-  margin: 10px;
+  text-align: center;
+}
+
+button.main {
+  width: 100%;
+  padding: 15px;
+  font-size: 20px;
+  border-radius: 15px;
+  border: none;
+  background: #e74c3c;
+  color: white;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🐲 モンスター放置コインRPG</h1>
+<header>The hours</header>
 
-<p>💰 コイン：<span id="coin">0</span></p>
-<p>⏱ 毎秒：<span id="power">0</span></p>
-
-<div class="box">
-  <div class="monster">🟢</div>
-  <h2>スライム</h2>
-  <p>数：<span id="slime">0</span>（+1/秒）</p>
-  <button onclick="buySlime()">仲間にする（10）</button>
+<div class="status">
+💰 金貨: <span id="coin">0</span><br>
+📈 収益: <span id="income">0</span>/秒
 </div>
 
-<div class="box">
-  <div class="monster">🟤</div>
-  <h2>ゴブリン</h2>
-  <p>数：<span id="goblin">0</span>（+5/秒）</p>
-  <button onclick="buyGoblin()">仲間にする（50）</button>
+<div class="big">
+  <div id="timer">読み込み中...</div>
+  <button id="getBtn" disabled>GETする</button>
 </div>
 
-<div class="box">
-  <div class="monster">🔴</div>
-  <h2>ドラゴン</h2>
-  <p>数：<span id="dragon">0</span>（+20/秒）</p>
-  <button onclick="buyDragon()">仲間にする（200）</button>
+<div class="tabs">
+  <button onclick="openTab('storage')" class="active">倉庫</button>
+  <button onclick="openTab('book')">図鑑</button>
+  <button onclick="openTab('slot')">スロット</button>
 </div>
 
-<div class="box">
-  <h2>🎰 スロット</h2>
-  <div class="slot">
-    <span id="s1">❓</span>
-    <span id="s2">❓</span>
-    <span id="s3">❓</span>
+<!-- 倉庫 -->
+<div id="storage" class="tab active">
+  <div id="storageList" class="grid"></div>
+</div>
+
+<!-- 図鑑 -->
+<div id="book" class="tab">
+  <div id="bookList" class="grid"></div>
+</div>
+
+<!-- スロット -->
+<div id="slot" class="tab">
+  <div class="card">
+    <h3>🎰 スロット</h3>
+    <div class="slot">
+      <span id="s1">❓</span>
+      <span id="s2">❓</span>
+      <span id="s3">❓</span>
+    </div>
+    <p>1回：100,000金</p>
+    <button class="main" onclick="spin()">回す</button>
+    <p id="slotResult"></p>
   </div>
-  <button onclick="spin()">回す（10コイン）</button>
-  <p id="result"></p>
-</div>
-
-<div class="box">
-  <h2>⏰ 1時間ランダム召喚</h2>
-  <p id="timer">読み込み中...</p>
-  <button id="randomBtn" onclick="randomGet()">モンスターGET</button>
 </div>
 
 <script>
-let coin = 0;
-let slime = 0;
-let goblin = 0;
-let dragon = 0;
+// =======================
+// モンスター定義（AI絵）
+// =======================
+const monsters = [
+  {name:"スライム", power:1, rarity:"N", img:"images/slime.png", rate:0.4},
+  {name:"ゴブリン", power:5, rarity:"N", img:"images/goblin.png", rate:0.3},
+  {name:"ドラゴン", power:25, rarity:"R", img:"images/dragon.png", rate:0.2},
+  {name:"フェニックス", power:80, rarity:"R", img:"images/phoenix.png", rate:0.09},
+  {name:"創世の神獣", power:300, rarity:"SR", img:"images/godbeast.png", rate:0.01}
+];
 
-// 保存された最終GET時刻
-let lastGet = localStorage.getItem("lastGet");
-if (!lastGet) lastGet = 0;
+// =======================
+// セーブ
+// =======================
+let save = JSON.parse(localStorage.getItem("save")) || {
+  coin: 0,
+  storage: [],
+  lastGet: 0,
+  lastTime: Date.now()
+};
 
-const symbols = ["🟢","🟤","🔴"];
+// =======================
+// オフライン収益
+// =======================
+(function(){
+  let now = Date.now();
+  let sec = Math.floor((now - save.lastTime)/1000);
+  let income = save.storage.reduce((a,m)=>a+m.power,0);
+  if(sec > 0 && income > 0){
+    let gain = sec * income;
+    save.coin += gain;
+    alert(`オフライン収益：${gain.toLocaleString()}金 獲得！`);
+  }
+  save.lastTime = now;
+})();
 
-// =====================
-// 放置収入
-// =====================
-setInterval(() => {
-  let power = slime * 1 + goblin * 5 + dragon * 20;
-  coin += power;
+function saveGame(){
+  save.lastTime = Date.now();
+  localStorage.setItem("save", JSON.stringify(save));
+}
+
+// =======================
+// 放置収益
+// =======================
+setInterval(()=>{
+  let income = save.storage.reduce((a,m)=>a+m.power,0);
+  save.coin += income;
+  saveGame();
   update();
   updateTimer();
-}, 1000);
+},1000);
 
-// =====================
-// モンスター購入
-// =====================
-function buySlime() {
-  if (coin >= 10) { coin -= 10; slime++; update(); }
-}
-function buyGoblin() {
-  if (coin >= 50) { coin -= 50; goblin++; update(); }
-}
-function buyDragon() {
-  if (coin >= 200) { coin -= 200; dragon++; update(); }
+// =======================
+// GET
+// =======================
+function getMonster(){
+  if(Date.now() - save.lastGet < 3600000) return;
+
+  let r = Math.random();
+  let sum = 0;
+  let pick;
+  for(let m of monsters){
+    sum += m.rate;
+    if(r < sum){
+      pick = m;
+      break;
+    }
+  }
+  save.storage.push(pick);
+  save.lastGet = Date.now();
+  saveGame();
+  update();
 }
 
-// =====================
+// =======================
+// タイマー
+// =======================
+function updateTimer(){
+  let diff = 3600000 - (Date.now() - save.lastGet);
+  if(diff <= 0){
+    timer.textContent = "GET可能！";
+    getBtn.disabled = false;
+  } else {
+    timer.textContent = "次のGETまで " + Math.ceil(diff/60000) + "分";
+    getBtn.disabled = true;
+  }
+}
+
+// =======================
+// 表示
+// =======================
+function update(){
+  coin.textContent = save.coin.toLocaleString();
+  income.textContent = save.storage.reduce((a,m)=>a+m.power,0);
+
+  storageList.innerHTML = "";
+  save.storage.forEach(m=>{
+    storageList.innerHTML += `
+      <div class="card monster">
+        <img src="${m.img}">
+        <b>${m.name}</b><br>
+        +${m.power}/秒<br>
+        <span class="${m.rarity==='SR'?'super':m.rarity==='R'?'rare':''}">
+          ${m.rarity}
+        </span>
+      </div>`;
+  });
+
+  bookList.innerHTML = "";
+  monsters.forEach(m=>{
+    let c = save.storage.filter(s=>s.name===m.name).length;
+    bookList.innerHTML += `
+      <div class="card monster">
+        <img src="${m.img}">
+        <b>${m.name}</b><br>
+        所持: ${c}<br>
+        ${m.rarity}
+      </div>`;
+  });
+}
+
+// =======================
 // スロット
-// =====================
-function spin() {
-  if (coin < 10) {
-    document.getElementById("result").textContent = "コインが足りない！";
+// =======================
+function spin(){
+  if(save.coin < 100000){
+    slotResult.textContent = "金が足りない";
     return;
   }
+  save.coin -= 100000;
 
-  coin -= 10;
+  let s=["🍒","🍋","🍇"];
+  let a=s[Math.floor(Math.random()*3)];
+  let b=s[Math.floor(Math.random()*3)];
+  let c=s[Math.floor(Math.random()*3)];
+  s1.textContent=a; s2.textContent=b; s3.textContent=c;
 
-  let a = symbols[Math.floor(Math.random() * 3)];
-  let b = symbols[Math.floor(Math.random() * 3)];
-  let c = symbols[Math.floor(Math.random() * 3)];
-
-  document.getElementById("s1").textContent = a;
-  document.getElementById("s2").textContent = b;
-  document.getElementById("s3").textContent = c;
-
-  if (a === b && b === c) {
-    let win = a === "🔴" ? 200 : a === "🟤" ? 50 : 20;
-    coin += win;
-    document.getElementById("result").textContent =
-      "🎉 大当たり！ +" + win + "コイン";
+  if(a===b && b===c){
+    save.coin += 5000000;
+    slotResult.textContent="🎉 大当たり！";
   } else {
-    document.getElementById("result").textContent = "はずれ…";
+    slotResult.textContent="はずれ";
   }
-
+  saveGame();
   update();
 }
 
-// =====================
-// 1時間ランダムGET
-// =====================
-function randomGet() {
-  const now = Date.now();
-  if (now - lastGet < 3600000) return;
-
-  const r = Math.random();
-
-  if (r < 0.6) {
-    slime++;
-    alert("🟢 スライムが仲間になった！");
-  } else if (r < 0.9) {
-    goblin++;
-    alert("🟤 ゴブリンが仲間になった！");
-  } else {
-    dragon++;
-    alert("🔴 ドラゴンが仲間になった！！！");
-  }
-
-  lastGet = now;
-  localStorage.setItem("lastGet", lastGet);
-  update();
+// =======================
+function openTab(id){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  event.target.classList.add("active");
 }
 
-// =====================
-// 残り時間表示
-// =====================
-function updateTimer() {
-  const now = Date.now();
-  const diff = 3600000 - (now - lastGet);
-
-  const timer = document.getElementById("timer");
-  const btn = document.getElementById("randomBtn");
-
-  if (diff <= 0) {
-    timer.textContent = "今すぐGETできる！";
-    btn.disabled = false;
-  } else {
-    const min = Math.ceil(diff / 60000);
-    timer.textContent = "次のGETまで " + min + " 分";
-    btn.disabled = true;
-  }
-}
-
-// =====================
-// 表示更新
-// =====================
-function update() {
-  document.getElementById("coin").textContent = coin;
-  document.getElementById("slime").textContent = slime;
-  document.getElementById("goblin").textContent = goblin;
-  document.getElementById("dragon").textContent = dragon;
-  document.getElementById("power").textContent =
-    slime * 1 + goblin * 5 + dragon * 20;
-}
+getBtn.onclick = getMonster;
+update();
+updateTimer();
 </script>
 
 </body>
