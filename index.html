@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>放置勇者クエスト</title>
+<title>モンスター牧場クエスト</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{margin:0;font-family:sans-serif;background:linear-gradient(#1a237e,#000);color:#fff}
@@ -13,33 +13,31 @@ h1,h2{text-align:center}
 button{width:100%;padding:14px;font-size:16px;border-radius:10px;border:none;background:#ffca28;font-weight:bold;margin-bottom:8px}
 .bar{background:#333;border-radius:10px;overflow:hidden}
 .bar-inner{height:16px;background:#66bb6a}
-.rare{color:#4dd0e1}
-.epic{color:#ce93d8}
-.legend{color:#ffeb3b}
-.small{font-size:12px;color:#ccc;text-align:center}
+.small{text-align:center;font-size:12px;color:#ccc}
+.mon{border-bottom:1px solid #444;padding:6px 0}
 </style>
 </head>
 <body>
 
+<!-- HOME -->
 <div id="home" class="screen active">
-<h1>🏰 放置勇者クエスト</h1>
+<h1>🐲 モンスター牧場クエスト</h1>
 <div class="panel">
 Lv <span id="h_lv"></span><br>
 攻撃力 <span id="h_atk"></span><br>
-転生 <span id="h_rebirth"></span><br>
-💰 <span id="h_gold"></span> G<br>
-⏱ 放置時間 <span id="offline"></span> 秒
+💰 <span id="h_gold"></span> G
 </div>
 <button onclick="go('battle')">🌲 冒険</button>
-<button onclick="go('gacha')">🍺 酒場</button>
+<button onclick="go('farm')">🐾 牧場</button>
+<button onclick="go('fusion')">🔮 合成</button>
 <button onclick="go('book')">📖 図鑑</button>
-<button onclick="go('boss')">🏰 魔王城</button>
 </div>
 
+<!-- BATTLE -->
 <div id="battle" class="screen">
 <h2>🌲 冒険中</h2>
 <div class="panel">
-Lv <span id="lv"></span> / EXP <span id="exp"></span>/<span id="next"></span>
+Lv <span id="lv"></span> EXP <span id="exp"></span>/<span id="next"></span>
 <div class="bar"><div id="expBar" class="bar-inner"></div></div>
 </div>
 <div class="panel">
@@ -50,62 +48,58 @@ HP <span id="m_hp"></span>
 <button onclick="back()">🏠 戻る</button>
 </div>
 
-<div id="gacha" class="screen">
-<h2>🍺 酒場</h2>
-<div class="panel">
-強化費用：<span id="cost"></span> G<br><br>
-<button onclick="upgrade()">💪 攻撃力強化</button>
-</div>
-<button onclick="rebirth()">🔄 転生</button>
+<!-- FARM -->
+<div id="farm" class="screen">
+<h2>🐾 モンスター牧場</h2>
+<div id="farmList" class="panel"></div>
+<button onclick="collect()">💰 収穫</button>
 <button onclick="back()">🏠 戻る</button>
 </div>
 
+<!-- FUSION -->
+<div id="fusion" class="screen">
+<h2>🔮 モンスター合成</h2>
+<div id="fusionList" class="panel"></div>
+<button onclick="back()">🏠 戻る</button>
+</div>
+
+<!-- BOOK -->
 <div id="book" class="screen">
 <h2>📖 モンスター図鑑</h2>
 <div id="bookList" class="panel"></div>
 <button onclick="back()">🏠 戻る</button>
 </div>
 
-<div id="boss" class="screen">
-<h2>🏰 魔王城</h2>
-<div class="panel">
-魔王HP <span id="bossHp"></span>
-<div class="bar"><div id="bossBar" class="bar-inner" style="background:red"></div></div>
-</div>
-<button onclick="fightBoss()">⚔️ 挑戦</button>
-<button onclick="back()">🏠 戻る</button>
-</div>
-
 <script>
-let hero={lv:1,exp:0,next:10,atk:1,rebirth:0};
-let gold=0,lastTime=Date.now(),bossMax=1000,bossHp=bossMax;
-let discovered={},interval,monster={};
-
-const monsters=[
-{name:"スライムもどき",hp:10,exp:5,g:3,r:"normal"},
-{name:"ゴブリン風",hp:30,exp:12,g:8,r:"normal"},
-{name:"ドラキー似",hp:60,exp:25,g:15,r:"rare"},
-{name:"メタル影",hp:120,exp:80,g:50,r:"epic"},
-{name:"古代魔獣",hp:300,exp:200,g:150,r:"legend"}
+let hero={lv:1,exp:0,next:10,atk:1};
+let gold=0,lastTime=Date.now();
+let monsters=[
+{name:"スライムもどき",hp:10,exp:5,g:3,rate:0.3,earn:1},
+{name:"ゴブリン風",hp:30,exp:12,g:8,rate:0.25,earn:3},
+{name:"ドラキー似",hp:60,exp:25,g:15,rate:0.2,earn:6},
+{name:"メタル影",hp:120,exp:80,g:50,rate:0.1,earn:20},
+{name:"古代魔獣",hp:300,exp:200,g:150,rate:0.05,earn:50}
 ];
+let monster={},farm=[],book={},interval;
 
 function save(){
-localStorage.setItem("idleSave",JSON.stringify({hero,gold,lastTime,bossHp,discovered}));
+localStorage.setItem("farmSave",JSON.stringify({hero,gold,farm,book,lastTime}));
 }
 function load(){
-let s=localStorage.getItem("idleSave");
+let s=localStorage.getItem("farmSave");
 if(!s)return;
 let d=JSON.parse(s);
-hero=d.hero; gold=d.gold; bossHp=d.bossHp; discovered=d.discovered||{};
+hero=d.hero;gold=d.gold;farm=d.farm;book=d.book;
 let diff=Math.floor((Date.now()-d.lastTime)/1000);
-gold+=diff*hero.atk;
-offline.textContent=diff;
+farm.forEach(m=>gold+=m.earn*diff);
 }
 
 function go(id){
 document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
 document.getElementById(id).classList.add("active");
 if(id==="battle") start();
+if(id==="farm") updateFarm();
+if(id==="fusion") updateFusion();
 if(id==="book") updateBook();
 updateHome();
 }
@@ -124,7 +118,11 @@ monster.hp-=hero.atk;
 if(monster.hp<=0){
 hero.exp+=monster.exp;
 gold+=monster.g;
-discovered[monster.name]=monster.r;
+book[monster.name]=true;
+if(Math.random()<monster.rate){
+farm.push({name:monster.name,earn:monster.earn});
+alert("🎉 "+monster.name+" が仲間になった！");
+}
 while(hero.exp>=hero.next){
 hero.exp-=hero.next;hero.lv++;hero.atk++;hero.next=Math.floor(hero.next*1.5);
 }
@@ -133,30 +131,15 @@ spawn();
 updateBattle();
 }
 
-function upgrade(){
-let c=hero.atk*50;
-if(gold<c)return alert("G不足");
-gold-=c;hero.atk++;
-}
-
-function rebirth(){
-if(hero.lv<20)return alert("Lv20必要");
-hero={lv:1,exp:0,next:10,atk:1+hero.rebirth*3,rebirth:hero.rebirth+1};
-gold=0;
-}
-
-function fightBoss(){
-bossHp-=hero.atk*10;
-if(bossHp<=0){alert("魔王撃破！");gold+=1000;bossMax+=500;bossHp=bossMax;}
-bossHpSpan=bossHp;
+function collect(){
+farm.forEach(m=>gold+=m.earn*10);
+alert("💰 収穫完了！");
 }
 
 function updateHome(){
 h_lv.textContent=hero.lv;
 h_atk.textContent=hero.atk;
-h_rebirth.textContent=hero.rebirth;
 h_gold.textContent=gold;
-cost.textContent=hero.atk*50;
 }
 
 function updateBattle(){
@@ -169,11 +152,37 @@ expBar.style.width=(hero.exp/hero.next*100)+"%";
 hpBar.style.width=(monster.hp/monster.maxHp*100)+"%";
 }
 
+function updateFarm(){
+farmList.innerHTML="";
+farm.forEach(m=>farmList.innerHTML+=`<div class="mon">🐾 ${m.name} +${m.earn}G/s</div>`);
+}
+
+function updateFusion(){
+fusionList.innerHTML="";
+let count={};
+farm.forEach(m=>count[m.name]=(count[m.name]||0)+1);
+Object.keys(count).forEach(n=>{
+if(count[n]>=3){
+fusionList.innerHTML+=`<button onclick="fuse('${n}')">🔮 ${n} 合成</button>`;
+}
+});
+}
+
+function fuse(name){
+let used=0;
+farm=farm.filter(m=>{
+if(m.name===name && used<3){used++;return false;}
+return true;
+});
+farm.push({name:"強化"+name,earn:10});
+alert("✨ 合成成功！");
+updateFusion();
+}
+
 function updateBook(){
 bookList.innerHTML="";
 monsters.forEach(m=>{
-let r=discovered[m.name];
-bookList.innerHTML+=r?`<div class="${r}">👾 ${m.name}</div>`:"❓ 未発見";
+bookList.innerHTML+=book[m.name]?`👾 ${m.name}<br>`:`❓ 未発見<br>`;
 });
 }
 
