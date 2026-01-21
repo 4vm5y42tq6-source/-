@@ -5,160 +5,179 @@
 <title>放置勇者クエスト</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-  font-family: "Segoe UI", sans-serif;
-  background: #111;
-  color: #fff;
-  text-align: center;
-}
-h1 { color: #4dd0e1; }
-.panel {
-  background: #1e1e1e;
-  margin: 10px;
-  padding: 15px;
-  border-radius: 10px;
-}
-button {
-  background: #4dd0e1;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 6px;
-  font-size: 16px;
-}
-.bar {
-  background: #333;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.bar-inner {
-  height: 18px;
-  background: #4caf50;
-}
-small { color: #aaa; }
+body{margin:0;font-family:sans-serif;background:linear-gradient(#1a237e,#000);color:#fff}
+h1,h2{text-align:center}
+.screen{display:none;padding:15px}
+.active{display:block}
+.panel{background:rgba(0,0,0,.6);padding:15px;border-radius:12px;margin-bottom:12px}
+button{width:100%;padding:14px;font-size:16px;border-radius:10px;border:none;background:#ffca28;font-weight:bold;margin-bottom:8px}
+.bar{background:#333;border-radius:10px;overflow:hidden}
+.bar-inner{height:16px;background:#66bb6a}
+.rare{color:#4dd0e1}
+.epic{color:#ce93d8}
+.legend{color:#ffeb3b}
+.small{font-size:12px;color:#ccc;text-align:center}
 </style>
 </head>
 <body>
 
-<h1>⚔️ 放置勇者クエスト ⚔️</h1>
-
+<div id="home" class="screen active">
+<h1>🏰 放置勇者クエスト</h1>
 <div class="panel">
-  <h2>🧙‍♂️ 勇者</h2>
-  Lv <span id="lv">1</span><br>
-  EXP <span id="exp">0</span> / <span id="nextExp">10</span>
-  <div class="bar"><div id="expBar" class="bar-inner"></div></div>
-  攻撃力：<span id="atk">1</span>
+Lv <span id="h_lv"></span><br>
+攻撃力 <span id="h_atk"></span><br>
+転生 <span id="h_rebirth"></span><br>
+💰 <span id="h_gold"></span> G<br>
+⏱ 放置時間 <span id="offline"></span> 秒
+</div>
+<button onclick="go('battle')">🌲 冒険</button>
+<button onclick="go('gacha')">🍺 酒場</button>
+<button onclick="go('book')">📖 図鑑</button>
+<button onclick="go('boss')">🏰 魔王城</button>
 </div>
 
+<div id="battle" class="screen">
+<h2>🌲 冒険中</h2>
 <div class="panel">
-  <h2>👾 モンスター</h2>
-  <div id="monsterName">スライムもどき</div>
-  HP <span id="mhp">10</span>
-  <div class="bar"><div id="hpBar" class="bar-inner" style="background:#e53935"></div></div>
+Lv <span id="lv"></span> / EXP <span id="exp"></span>/<span id="next"></span>
+<div class="bar"><div id="expBar" class="bar-inner"></div></div>
+</div>
+<div class="panel">
+👾 <span id="m_name"></span><br>
+HP <span id="m_hp"></span>
+<div class="bar"><div id="hpBar" class="bar-inner" style="background:#ef5350"></div></div>
+</div>
+<button onclick="back()">🏠 戻る</button>
 </div>
 
+<div id="gacha" class="screen">
+<h2>🍺 酒場</h2>
 <div class="panel">
-  💰 ゴールド：<span id="gold">0</span><br><br>
-  <button onclick="rebirth()">🔄 転生（Lv10〜）</button>
+強化費用：<span id="cost"></span> G<br><br>
+<button onclick="upgrade()">💪 攻撃力強化</button>
+</div>
+<button onclick="rebirth()">🔄 転生</button>
+<button onclick="back()">🏠 戻る</button>
 </div>
 
+<div id="book" class="screen">
+<h2>📖 モンスター図鑑</h2>
+<div id="bookList" class="panel"></div>
+<button onclick="back()">🏠 戻る</button>
+</div>
+
+<div id="boss" class="screen">
+<h2>🏰 魔王城</h2>
 <div class="panel">
-  <small>
-    ※このゲームはドラクエ風のオリジナル放置ゲームです  
-  </small>
+魔王HP <span id="bossHp"></span>
+<div class="bar"><div id="bossBar" class="bar-inner" style="background:red"></div></div>
+</div>
+<button onclick="fightBoss()">⚔️ 挑戦</button>
+<button onclick="back()">🏠 戻る</button>
 </div>
 
 <script>
-let hero = {
-  lv: 1,
-  exp: 0,
-  nextExp: 10,
-  atk: 1,
-  rebirth: 0
-};
+let hero={lv:1,exp:0,next:10,atk:1,rebirth:0};
+let gold=0,lastTime=Date.now(),bossMax=1000,bossHp=bossMax;
+let discovered={},interval,monster={};
 
-let gold = 0;
-
-let monster = {
-  name: "",
-  maxHp: 10,
-  hp: 10,
-  exp: 5,
-  gold: 3
-};
-
-const monsters = [
-  {name:"スライムもどき", hp:10, exp:5, gold:3},
-  {name:"ゴブリン風", hp:20, exp:10, gold:6},
-  {name:"ドラキー似", hp:40, exp:20, gold:12},
-  {name:"メタルっぽい影", hp:80, exp:50, gold:30, rare:true},
-  {name:"魔王の手下？", hp:200, exp:150, gold:100, legend:true}
+const monsters=[
+{name:"スライムもどき",hp:10,exp:5,g:3,r:"normal"},
+{name:"ゴブリン風",hp:30,exp:12,g:8,r:"normal"},
+{name:"ドラキー似",hp:60,exp:25,g:15,r:"rare"},
+{name:"メタル影",hp:120,exp:80,g:50,r:"epic"},
+{name:"古代魔獣",hp:300,exp:200,g:150,r:"legend"}
 ];
 
-function spawnMonster(){
-  let m = monsters[Math.floor(Math.random()*monsters.length)];
-  monster = {
-    name: m.name,
-    maxHp: m.hp,
-    hp: m.hp,
-    exp: m.exp,
-    gold: m.gold
-  };
-  updateUI();
+function save(){
+localStorage.setItem("idleSave",JSON.stringify({hero,gold,lastTime,bossHp,discovered}));
+}
+function load(){
+let s=localStorage.getItem("idleSave");
+if(!s)return;
+let d=JSON.parse(s);
+hero=d.hero; gold=d.gold; bossHp=d.bossHp; discovered=d.discovered||{};
+let diff=Math.floor((Date.now()-d.lastTime)/1000);
+gold+=diff*hero.atk;
+offline.textContent=diff;
+}
+
+function go(id){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+if(id==="battle") start();
+if(id==="book") updateBook();
+updateHome();
+}
+
+function back(){clearInterval(interval);save();go("home");}
+
+function start(){spawn();interval=setInterval(attack,1000);}
+
+function spawn(){
+let m=monsters[Math.floor(Math.random()*monsters.length)];
+monster={...m,maxHp:m.hp};
 }
 
 function attack(){
-  monster.hp -= hero.atk;
-  if(monster.hp <= 0){
-    hero.exp += monster.exp;
-    gold += monster.gold;
-    levelUp();
-    spawnMonster();
-  }
-  updateUI();
+monster.hp-=hero.atk;
+if(monster.hp<=0){
+hero.exp+=monster.exp;
+gold+=monster.g;
+discovered[monster.name]=monster.r;
+while(hero.exp>=hero.next){
+hero.exp-=hero.next;hero.lv++;hero.atk++;hero.next=Math.floor(hero.next*1.5);
+}
+spawn();
+}
+updateBattle();
 }
 
-function levelUp(){
-  while(hero.exp >= hero.nextExp){
-    hero.exp -= hero.nextExp;
-    hero.lv++;
-    hero.nextExp = Math.floor(hero.nextExp * 1.5);
-    hero.atk++;
-  }
+function upgrade(){
+let c=hero.atk*50;
+if(gold<c)return alert("G不足");
+gold-=c;hero.atk++;
 }
 
 function rebirth(){
-  if(hero.lv < 10){
-    alert("Lv10以上で転生できます！");
-    return;
-  }
-  hero.rebirth++;
-  hero.lv = 1;
-  hero.exp = 0;
-  hero.nextExp = 10;
-  hero.atk = 1 + hero.rebirth * 2;
-  gold = 0;
-  alert("転生成功！ 攻撃力が大幅アップ！");
+if(hero.lv<20)return alert("Lv20必要");
+hero={lv:1,exp:0,next:10,atk:1+hero.rebirth*3,rebirth:hero.rebirth+1};
+gold=0;
 }
 
-function updateUI(){
-  document.getElementById("lv").textContent = hero.lv;
-  document.getElementById("exp").textContent = hero.exp;
-  document.getElementById("nextExp").textContent = hero.nextExp;
-  document.getElementById("atk").textContent = hero.atk;
-  document.getElementById("gold").textContent = gold;
-
-  document.getElementById("monsterName").textContent = monster.name;
-  document.getElementById("mhp").textContent = monster.hp;
-
-  document.getElementById("expBar").style.width =
-    (hero.exp / hero.nextExp * 100) + "%";
-  document.getElementById("hpBar").style.width =
-    (monster.hp / monster.maxHp * 100) + "%";
+function fightBoss(){
+bossHp-=hero.atk*10;
+if(bossHp<=0){alert("魔王撃破！");gold+=1000;bossMax+=500;bossHp=bossMax;}
+bossHpSpan=bossHp;
 }
 
-spawnMonster();
-setInterval(attack, 1000); // 完全放置
+function updateHome(){
+h_lv.textContent=hero.lv;
+h_atk.textContent=hero.atk;
+h_rebirth.textContent=hero.rebirth;
+h_gold.textContent=gold;
+cost.textContent=hero.atk*50;
+}
+
+function updateBattle(){
+lv.textContent=hero.lv;
+exp.textContent=hero.exp;
+next.textContent=hero.next;
+m_name.textContent=monster.name;
+m_hp.textContent=monster.hp;
+expBar.style.width=(hero.exp/hero.next*100)+"%";
+hpBar.style.width=(monster.hp/monster.maxHp*100)+"%";
+}
+
+function updateBook(){
+bookList.innerHTML="";
+monsters.forEach(m=>{
+let r=discovered[m.name];
+bookList.innerHTML+=r?`<div class="${r}">👾 ${m.name}</div>`:"❓ 未発見";
+});
+}
+
+load();updateHome();
 </script>
-
 </body>
 </html>
