@@ -1,10 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>モンスター放置コインRPG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #1b263b;
+  color: #fff;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+.box {
+  background: #415a77;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.monster {
+  font-size: 50px;
+}
+
+button {
+  font-size: 16px;
+  padding: 10px;
+  margin-top: 5px;
+}
+
+.slot {
+  font-size: 40px;
+  margin: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🐲 モンスター放置コインRPG</h1>
+
+<p>💰 コイン：<span id="coin">0</span></p>
+<p>⏱ 毎秒：<span id="power">0</span></p>
+
+<div class="box">
+  <div class="monster">🟢</div>
+  <h2>スライム</h2>
+  <p>数：<span id="slime">0</span>（+1/秒）</p>
+  <button onclick="buySlime()">仲間にする（10）</button>
+</div>
+
+<div class="box">
+  <div class="monster">🟤</div>
+  <h2>ゴブリン</h2>
+  <p>数：<span id="goblin">0</span>（+5/秒）</p>
+  <button onclick="buyGoblin()">仲間にする（50）</button>
+</div>
+
+<div class="box">
+  <div class="monster">🔴</div>
+  <h2>ドラゴン</h2>
+  <p>数：<span id="dragon">0</span>（+20/秒）</p>
+  <button onclick="buyDragon()">仲間にする（200）</button>
+</div>
+
+<div class="box">
+  <h2>🎰 スロット</h2>
+  <div class="slot">
+    <span id="s1">❓</span>
+    <span id="s2">❓</span>
+    <span id="s3">❓</span>
+  </div>
+  <button onclick="spin()">回す（10コイン）</button>
+  <p id="result"></p>
+</div>
+
+<div class="box">
+  <h2>⏰ 1時間ランダム召喚</h2>
+  <p id="timer">読み込み中...</p>
+  <button id="randomBtn" onclick="randomGet()">モンスターGET</button>
+</div>
+
 <script>
 let coin = 0;
 let slime = 0;
 let goblin = 0;
 let dragon = 0;
 
-// 最後にランダムGETした時刻（保存）
+// 保存された最終GET時刻
 let lastGet = localStorage.getItem("lastGet");
 if (!lastGet) lastGet = 0;
 
@@ -34,7 +122,38 @@ function buyDragon() {
 }
 
 // =====================
-// 1時間1回ランダムGET
+// スロット
+// =====================
+function spin() {
+  if (coin < 10) {
+    document.getElementById("result").textContent = "コインが足りない！";
+    return;
+  }
+
+  coin -= 10;
+
+  let a = symbols[Math.floor(Math.random() * 3)];
+  let b = symbols[Math.floor(Math.random() * 3)];
+  let c = symbols[Math.floor(Math.random() * 3)];
+
+  document.getElementById("s1").textContent = a;
+  document.getElementById("s2").textContent = b;
+  document.getElementById("s3").textContent = c;
+
+  if (a === b && b === c) {
+    let win = a === "🔴" ? 200 : a === "🟤" ? 50 : 20;
+    coin += win;
+    document.getElementById("result").textContent =
+      "🎉 大当たり！ +" + win + "コイン";
+  } else {
+    document.getElementById("result").textContent = "はずれ…";
+  }
+
+  update();
+}
+
+// =====================
+// 1時間ランダムGET
 // =====================
 function randomGet() {
   const now = Date.now();
@@ -90,3 +209,6 @@ function update() {
     slime * 1 + goblin * 5 + dragon * 20;
 }
 </script>
+
+</body>
+</html>
