@@ -2,322 +2,193 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>The hours</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Hours</title>
 <style>
 body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f2f4f7;
+  font-family: system-ui;
+  background:#f5f5f5;
+  margin:0;
 }
-
 header {
-  padding: 15px;
-  text-align: center;
-  font-size: 26px;
-  font-weight: bold;
-  background: white;
+  background:#fff;
+  padding:12px;
+  text-align:center;
+  font-weight:bold;
 }
-
-.status {
-  background: #eee;
-  margin: 10px;
-  padding: 10px;
-  border-radius: 10px;
+.box {
+  background:#fff;
+  margin:12px;
+  padding:12px;
+  border-radius:12px;
 }
-
-.big {
-  margin: 10px;
-  text-align: center;
+button {
+  width:100%;
+  padding:14px;
+  font-size:18px;
+  border:none;
+  border-radius:12px;
 }
-
-.big button {
-  width: 100%;
-  font-size: 24px;
-  padding: 15px;
-  border-radius: 15px;
-  border: none;
+#getBtn {
+  background:#ccc;
+  color:#fff;
 }
-
-.big button:disabled {
-  background: #ccc;
+.active {
+  background:#2e7dff !important;
 }
-
-.tabs {
-  display: flex;
-  gap: 5px;
-  margin: 10px;
-}
-
-.tabs button {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-}
-
-.tabs button.active {
-  background: #2b7bb9;
-  color: white;
-}
-
-.tab {
-  display: none;
-  margin: 10px;
-}
-
-.tab.active {
-  display: block;
-}
-
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
 .monster {
-  text-align: center;
+  display:flex;
+  gap:10px;
+  margin-bottom:10px;
+  align-items:center;
 }
-
 .monster img {
-  width: 90px;
-  height: 90px;
-  object-fit: contain;
+  width:64px;
+  height:64px;
+  border-radius:8px;
+  background:#eee;
 }
-
-.rare { color: gold; font-weight: bold; }
-.super { color: crimson; font-weight: bold; }
-
-.slot {
-  font-size: 40px;
-  text-align: center;
+.small {
+  font-size:12px;
+  color:#666;
 }
-
-button.main {
-  width: 100%;
-  padding: 15px;
-  font-size: 20px;
-  border-radius: 15px;
-  border: none;
-  background: #e74c3c;
-  color: white;
+.tab button {
+  width:24%;
 }
 </style>
 </head>
-
 <body>
 
 <header>The hours</header>
 
-<div class="status">
-💰 金貨: <span id="coin">0</span><br>
-📈 収益: <span id="income">0</span>/秒
+<div class="box">
+  💰 金貨: <span id="gold">0</span><br>
+  ⏱ 収益: <span id="income">0</span>/秒
 </div>
 
-<div class="big">
-  <div id="timer">読み込み中...</div>
-  <button id="getBtn" disabled>GETする</button>
+<div class="box">
+  次のGETまで<br>
+  <b id="timer">--:--</b>
+  <button id="getBtn">GETする</button>
 </div>
 
-<div class="tabs">
-  <button onclick="openTab('storage')" class="active">倉庫</button>
-  <button onclick="openTab('book')">図鑑</button>
-  <button onclick="openTab('slot')">スロット</button>
+<div class="box tab">
+  <button onclick="showTab('warehouse')">倉庫</button>
+  <button onclick="showTab('set')">セット</button>
+  <button onclick="showTab('dex')">図鑑</button>
+  <button onclick="showTab('help')">説明</button>
 </div>
 
-<!-- 倉庫 -->
-<div id="storage" class="tab active">
-  <div id="storageList" class="grid"></div>
-</div>
-
-<!-- 図鑑 -->
-<div id="book" class="tab">
-  <div id="bookList" class="grid"></div>
-</div>
-
-<!-- スロット -->
-<div id="slot" class="tab">
-  <div class="card">
-    <h3>🎰 スロット</h3>
-    <div class="slot">
-      <span id="s1">❓</span>
-      <span id="s2">❓</span>
-      <span id="s3">❓</span>
-    </div>
-    <p>1回：100,000金</p>
-    <button class="main" onclick="spin()">回す</button>
-    <p id="slotResult"></p>
-  </div>
-</div>
+<div class="box" id="content"></div>
 
 <script>
-// =======================
-// モンスター定義（AI絵）
-// =======================
 const monsters = [
-  {name:"スライム", power:1, rarity:"N", img:"images/slime.png", rate:0.4},
-  {name:"ゴブリン", power:5, rarity:"N", img:"images/goblin.png", rate:0.3},
-  {name:"ドラゴン", power:25, rarity:"R", img:"images/dragon.png", rate:0.2},
-  {name:"フェニックス", power:80, rarity:"R", img:"images/phoenix.png", rate:0.09},
-  {name:"創世の神獣", power:300, rarity:"SR", img:"images/godbeast.png", rate:0.01}
+  {name:"スライム", img:"https://i.imgur.com/7yUvePI.png", base:1},
+  {name:"ゴブリン", img:"https://i.imgur.com/vH1yH7P.png", base:2},
+  {name:"ドラキー", img:"https://i.imgur.com/7dM7N5T.png", base:3},
+  {name:"フェニックス", img:"https://i.imgur.com/F7cZ2xN.png", base:8, rare:true},
+  {name:"覚醒スライム", img:"https://i.imgur.com/VnQ9QpB.png", base:12, rare:true}
 ];
 
-// =======================
-// セーブ
-// =======================
-let save = JSON.parse(localStorage.getItem("save")) || {
-  coin: 0,
-  storage: [],
-  lastGet: 0,
-  lastTime: Date.now()
+let data = JSON.parse(localStorage.getItem("hours")) || {
+  gold:0,
+  monsters:[],
+  set:null,
+  lastGet:0,
+  lastTime:Date.now()
 };
 
-// =======================
-// オフライン収益
-// =======================
-(function(){
-  let now = Date.now();
-  let sec = Math.floor((now - save.lastTime)/1000);
-  let income = save.storage.reduce((a,m)=>a+m.power,0);
-  if(sec > 0 && income > 0){
-    let gain = sec * income;
-    save.coin += gain;
-    alert(`オフライン収益：${gain.toLocaleString()}金 獲得！`);
-  }
-  save.lastTime = now;
-})();
-
-function saveGame(){
-  save.lastTime = Date.now();
-  localStorage.setItem("save", JSON.stringify(save));
+function save(){
+  localStorage.setItem("hours",JSON.stringify(data));
 }
 
-// =======================
-// 放置収益
-// =======================
-setInterval(()=>{
-  let income = save.storage.reduce((a,m)=>a+m.power,0);
-  save.coin += income;
-  saveGame();
-  update();
-  updateTimer();
-},1000);
-
-// =======================
-// GET
-// =======================
-function getMonster(){
-  if(Date.now() - save.lastGet < 3600000) return;
-
-  let r = Math.random();
-  let sum = 0;
-  let pick;
-  for(let m of monsters){
-    sum += m.rate;
-    if(r < sum){
-      pick = m;
-      break;
-    }
-  }
-  save.storage.push(pick);
-  save.lastGet = Date.now();
-  saveGame();
-  update();
+function updateIncome(){
+  if(!data.set){ document.getElementById("income").textContent=0; return;}
+  document.getElementById("income").textContent = data.set.power.toFixed(1);
 }
 
-// =======================
-// タイマー
-// =======================
+function tick(){
+  const now = Date.now();
+  const diff = (now - data.lastTime)/1000;
+  if(data.set){
+    data.gold += diff * data.set.power;
+  }
+  data.lastTime = now;
+  document.getElementById("gold").textContent = Math.floor(data.gold);
+  save();
+}
+setInterval(tick,1000);
+
 function updateTimer(){
-  let diff = 3600000 - (Date.now() - save.lastGet);
-  if(diff <= 0){
-    timer.textContent = "GET可能！";
-    getBtn.disabled = false;
+  const remain = 3600000 - (Date.now() - data.lastGet);
+  if(remain<=0){
+    document.getElementById("timer").textContent="GET可能";
+    document.getElementById("getBtn").classList.add("active");
   } else {
-    timer.textContent = "次のGETまで " + Math.ceil(diff/60000) + "分";
-    getBtn.disabled = true;
+    const m = Math.floor(remain/60000);
+    const s = Math.floor((remain%60000)/1000);
+    document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
   }
 }
+setInterval(updateTimer,1000);
 
-// =======================
-// 表示
-// =======================
-function update(){
-  coin.textContent = save.coin.toLocaleString();
-  income.textContent = save.storage.reduce((a,m)=>a+m.power,0);
+document.getElementById("getBtn").onclick=()=>{
+  if(Date.now()-data.lastGet<3600000) return;
+  const m = monsters[Math.floor(Math.random()*monsters.length)];
+  const iv = Math.floor(Math.random()*100)+1;
+  const color = ["青","赤","金","銀"][Math.floor(Math.random()*4)];
+  const power = m.base * iv * (m.rare?3:1) * (color=="金"?2:color=="銀"?1.5:1);
+  data.monsters.push({...m,iv,color,power});
+  data.lastGet = Date.now();
+  save();
+  alert(`${m.name}をGET！`);
+};
 
-  storageList.innerHTML = "";
-  save.storage.forEach(m=>{
-    storageList.innerHTML += `
-      <div class="card monster">
-        <img src="${m.img}">
-        <b>${m.name}</b><br>
-        +${m.power}/秒<br>
-        <span class="${m.rarity==='SR'?'super':m.rarity==='R'?'rare':''}">
-          ${m.rarity}
-        </span>
+function showTab(t){
+  const c = document.getElementById("content");
+  c.innerHTML="";
+  if(t=="warehouse"){
+    data.monsters.forEach((m,i)=>{
+      const d=document.createElement("div");
+      d.className="monster";
+      d.innerHTML=`<img src="${m.img}">
+      <div>
+      <b>${m.color} ${m.name}</b><br>
+      個体値:${m.iv}<br>
+      収益:${m.power.toFixed(1)}
+      <button onclick="setMonster(${i})">セット</button>
       </div>`;
-  });
-
-  bookList.innerHTML = "";
-  monsters.forEach(m=>{
-    let c = save.storage.filter(s=>s.name===m.name).length;
-    bookList.innerHTML += `
-      <div class="card monster">
-        <img src="${m.img}">
-        <b>${m.name}</b><br>
-        所持: ${c}<br>
-        ${m.rarity}
-      </div>`;
-  });
-}
-
-// =======================
-// スロット
-// =======================
-function spin(){
-  if(save.coin < 100000){
-    slotResult.textContent = "金が足りない";
-    return;
+      c.appendChild(d);
+    });
   }
-  save.coin -= 100000;
-
-  let s=["🍒","🍋","🍇"];
-  let a=s[Math.floor(Math.random()*3)];
-  let b=s[Math.floor(Math.random()*3)];
-  let c=s[Math.floor(Math.random()*3)];
-  s1.textContent=a; s2.textContent=b; s3.textContent=c;
-
-  if(a===b && b===c){
-    save.coin += 5000000;
-    slotResult.textContent="🎉 大当たり！";
-  } else {
-    slotResult.textContent="はずれ";
+  if(t=="set"){
+    c.innerHTML = data.set ? 
+      `セット中:<br><b>${data.set.name}</b>` : "未セット";
   }
-  saveGame();
-  update();
+  if(t=="dex"){
+    monsters.forEach(m=>{
+      c.innerHTML+=`<div>${m.name}</div>`;
+    });
+  }
+  if(t=="help"){
+    c.innerHTML=`
+    ・1時間に1回GET<br>
+    ・セットしたモンスターだけ収益<br>
+    ・レアは超強い<br>
+    ・倉庫は無限<br>
+    `;
+  }
 }
 
-// =======================
-function openTab(id){
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  event.target.classList.add("active");
+function setMonster(i){
+  data.set = data.monsters[i];
+  updateIncome();
+  save();
+  alert("セットしました！");
 }
 
-getBtn.onclick = getMonster;
-update();
-updateTimer();
+updateIncome();
+showTab("warehouse");
 </script>
 
 </body>
