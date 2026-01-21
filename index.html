@@ -4,16 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Hours</title>
+
 <style>
 body {
-  font-family: system-ui;
-  background:#f5f5f5;
   margin:0;
+  font-family: system-ui;
+  background:#f2f2f2;
 }
 header {
-  background:#fff;
-  padding:12px;
+  background:#ffffff;
+  padding:14px;
   text-align:center;
+  font-size:20px;
   font-weight:bold;
 }
 .box {
@@ -30,161 +32,180 @@ button {
   border-radius:12px;
 }
 #getBtn {
-  background:#ccc;
-  color:#fff;
+  background:#bbb;
+  color:white;
 }
 .active {
   background:#2e7dff !important;
 }
+.tab button {
+  width:24%;
+}
 .monster {
   display:flex;
   gap:10px;
-  margin-bottom:10px;
-  align-items:center;
+  margin-bottom:12px;
 }
 .monster img {
-  width:64px;
-  height:64px;
-  border-radius:8px;
-  background:#eee;
+  width:72px;
+  height:72px;
+  border-radius:10px;
 }
 .small {
   font-size:12px;
   color:#666;
 }
-.tab button {
-  width:24%;
-}
 </style>
 </head>
+
 <body>
 
-<header>The hours</header>
+<header>The Hours</header>
 
 <div class="box">
-  💰 金貨: <span id="gold">0</span><br>
-  ⏱ 収益: <span id="income">0</span>/秒
+💰 金貨：<span id="gold">0</span><br>
+⏱ 収益：<span id="income">0</span>/秒
 </div>
 
 <div class="box">
-  次のGETまで<br>
-  <b id="timer">--:--</b>
-  <button id="getBtn">GETする</button>
+次のGETまで<br>
+<b id="timer">--:--</b>
+<button id="getBtn">GETする</button>
 </div>
 
 <div class="box tab">
-  <button onclick="showTab('warehouse')">倉庫</button>
-  <button onclick="showTab('set')">セット</button>
-  <button onclick="showTab('dex')">図鑑</button>
-  <button onclick="showTab('help')">説明</button>
+<button onclick="showTab('warehouse')">倉庫</button>
+<button onclick="showTab('set')">セット</button>
+<button onclick="showTab('dex')">図鑑</button>
+<button onclick="showTab('help')">説明</button>
 </div>
 
 <div class="box" id="content"></div>
 
 <script>
-const monsters = [
-  {name:"スライム", img:"https://i.imgur.com/7yUvePI.png", base:1},
-  {name:"ゴブリン", img:"https://i.imgur.com/vH1yH7P.png", base:2},
-  {name:"ドラキー", img:"https://i.imgur.com/7dM7N5T.png", base:3},
-  {name:"フェニックス", img:"https://i.imgur.com/F7cZ2xN.png", base:8, rare:true},
-  {name:"覚醒スライム", img:"https://i.imgur.com/VnQ9QpB.png", base:12, rare:true}
+const monsterDB = [
+ {name:"スライム", img:"images/slime.png", base:1},
+ {name:"レッドスライム", img:"images/red_slime.png", base:2},
+ {name:"ドラキー", img:"images/dracky.png", base:3},
+ {name:"ゴブリン", img:"images/goblin.png", base:4},
+ {name:"キメラ", img:"images/chimera.png", base:6},
+ {name:"ゴーレム", img:"images/golem.png", base:8},
+ {name:"ドラゴン", img:"images/dragon.png", base:15, rare:true},
+ {name:"メタルスライム", img:"images/metal_slime.png", base:25, rare:true}
 ];
 
 let data = JSON.parse(localStorage.getItem("hours")) || {
-  gold:0,
-  monsters:[],
-  set:null,
-  lastGet:0,
-  lastTime:Date.now()
+ gold:0,
+ monsters:[],
+ set:null,
+ lastGet:0,
+ lastTime:Date.now()
 };
 
-function save(){
-  localStorage.setItem("hours",JSON.stringify(data));
-}
+function save(){ localStorage.setItem("hours",JSON.stringify(data)); }
 
 function updateIncome(){
-  if(!data.set){ document.getElementById("income").textContent=0; return;}
-  document.getElementById("income").textContent = data.set.power.toFixed(1);
+ if(!data.set){ income.textContent=0; return; }
+ income.textContent = data.set.power.toFixed(1);
 }
 
 function tick(){
-  const now = Date.now();
-  const diff = (now - data.lastTime)/1000;
-  if(data.set){
-    data.gold += diff * data.set.power;
-  }
-  data.lastTime = now;
-  document.getElementById("gold").textContent = Math.floor(data.gold);
-  save();
+ const now = Date.now();
+ const diff = (now - data.lastTime)/1000;
+ if(data.set){
+   data.gold += diff * data.set.power;
+ }
+ data.lastTime = now;
+ gold.textContent = Math.floor(data.gold);
+ save();
 }
 setInterval(tick,1000);
 
 function updateTimer(){
-  const remain = 3600000 - (Date.now() - data.lastGet);
-  if(remain<=0){
-    document.getElementById("timer").textContent="GET可能";
-    document.getElementById("getBtn").classList.add("active");
-  } else {
-    const m = Math.floor(remain/60000);
-    const s = Math.floor((remain%60000)/1000);
-    document.getElementById("timer").textContent=`${m}:${s.toString().padStart(2,"0")}`;
-  }
+ const remain = 3600000 - (Date.now() - data.lastGet);
+ if(remain<=0){
+   timer.textContent="GET可能";
+   getBtn.classList.add("active");
+ } else {
+   const m = Math.floor(remain/60000);
+   const s = Math.floor((remain%60000)/1000);
+   timer.textContent=`${m}:${s.toString().padStart(2,"0")}`;
+ }
 }
 setInterval(updateTimer,1000);
 
-document.getElementById("getBtn").onclick=()=>{
-  if(Date.now()-data.lastGet<3600000) return;
-  const m = monsters[Math.floor(Math.random()*monsters.length)];
-  const iv = Math.floor(Math.random()*100)+1;
-  const color = ["青","赤","金","銀"][Math.floor(Math.random()*4)];
-  const power = m.base * iv * (m.rare?3:1) * (color=="金"?2:color=="銀"?1.5:1);
-  data.monsters.push({...m,iv,color,power});
-  data.lastGet = Date.now();
-  save();
-  alert(`${m.name}をGET！`);
+getBtn.onclick = ()=>{
+ if(Date.now()-data.lastGet < 3600000) return;
+
+ const m = monsterDB[Math.floor(Math.random()*monsterDB.length)];
+ const iv = Math.floor(Math.random()*100)+1;
+ const color = ["青","赤","金","銀"][Math.floor(Math.random()*4)];
+ let power = m.base * iv;
+
+ if(color==="金") power*=2;
+ if(color==="銀") power*=1.5;
+ if(m.rare) power*=3;
+
+ data.monsters.push({
+  ...m,
+  iv,
+  color,
+  power
+ });
+
+ data.lastGet = Date.now();
+ save();
+ alert(`${m.name}をGET！`);
 };
 
-function showTab(t){
-  const c = document.getElementById("content");
-  c.innerHTML="";
-  if(t=="warehouse"){
-    data.monsters.forEach((m,i)=>{
-      const d=document.createElement("div");
-      d.className="monster";
-      d.innerHTML=`<img src="${m.img}">
-      <div>
-      <b>${m.color} ${m.name}</b><br>
-      個体値:${m.iv}<br>
-      収益:${m.power.toFixed(1)}
-      <button onclick="setMonster(${i})">セット</button>
-      </div>`;
-      c.appendChild(d);
-    });
-  }
-  if(t=="set"){
-    c.innerHTML = data.set ? 
-      `セット中:<br><b>${data.set.name}</b>` : "未セット";
-  }
-  if(t=="dex"){
-    monsters.forEach(m=>{
-      c.innerHTML+=`<div>${m.name}</div>`;
-    });
-  }
-  if(t=="help"){
-    c.innerHTML=`
-    ・1時間に1回GET<br>
-    ・セットしたモンスターだけ収益<br>
-    ・レアは超強い<br>
-    ・倉庫は無限<br>
-    `;
-  }
+function showTab(tab){
+ const c = content;
+ c.innerHTML="";
+
+ if(tab==="warehouse"){
+   data.monsters.forEach((m,i)=>{
+     const d=document.createElement("div");
+     d.className="monster";
+     d.innerHTML=`
+     <img src="${m.img}">
+     <div>
+     <b>${m.color} ${m.name}</b><br>
+     個体値:${m.iv}<br>
+     収益:${m.power.toFixed(1)}<br>
+     <button onclick="setMonster(${i})">セット</button>
+     </div>`;
+     c.appendChild(d);
+   });
+ }
+
+ if(tab==="set"){
+   c.innerHTML = data.set
+    ? `<b>${data.set.color} ${data.set.name}</b><br>収益:${data.set.power.toFixed(1)}`
+    : "未セット";
+ }
+
+ if(tab==="dex"){
+   monsterDB.forEach(m=>{
+     c.innerHTML += `<div>${m.name}${m.rare?" 🌟":""}</div>`;
+   });
+ }
+
+ if(tab==="help"){
+   c.innerHTML = `
+   ・1時間に1回GET<br>
+   ・倉庫は無限<br>
+   ・セット中のみ収益発生<br>
+   ・レアモンスターは超高収益<br>
+   ・オフライン中も収益が貯まる
+   `;
+ }
 }
 
 function setMonster(i){
-  data.set = data.monsters[i];
-  updateIncome();
-  save();
-  alert("セットしました！");
+ data.set = data.monsters[i];
+ updateIncome();
+ save();
+ alert("セット完了！");
 }
 
 updateIncome();
