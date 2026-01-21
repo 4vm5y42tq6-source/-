@@ -28,7 +28,6 @@ h1{text-align:center;margin:20px 0}
   color:#fff;
 }
 .btn.red{background:#d85a4a}
-.btn.gray{background:#9ca3af}
 .tabs{
   display:flex;
   gap:8px;
@@ -46,17 +45,33 @@ h1{text-align:center;margin:20px 0}
   color:#fff;
 }
 .hidden{display:none}
+
 .mon{
   display:flex;
-  justify-content:space-between;
-  margin:6px 0;
-  gap:6px;
+  align-items:center;
+  gap:10px;
+  margin:8px 0;
+}
+.mon img{
+  width:56px;
+  height:56px;
+  border-radius:12px;
+  object-fit:cover;
 }
 .mon button{
   border:none;
   border-radius:10px;
   padding:6px 10px;
 }
+
+.set-img{
+  width:80px;
+  height:80px;
+  border-radius:16px;
+  object-fit:cover;
+  margin-top:8px;
+}
+
 .slot{
   background:#111;
   color:red;
@@ -77,7 +92,7 @@ small{color:#666}
   金貨: <span id="money">0</span><br>
   収益: <span id="income">0</span> / 秒<br>
   セット中: <span id="setName">なし</span><br>
-  累計ログイン: <span id="login">1</span> 日
+  <img id="setImg" class="set-img hidden">
 </div>
 
 <div class="card">
@@ -88,7 +103,6 @@ small{color:#666}
 <div class="tabs">
   <button class="active" onclick="openTab('store',this)">倉庫</button>
   <button onclick="openTab('shop',this)">ショップ</button>
-  <button onclick="openTab('book',this)">図鑑</button>
   <button onclick="openTab('slot',this)">スロット</button>
 </div>
 
@@ -100,15 +114,6 @@ small{color:#666}
 <div id="shop" class="card hidden">
   <h3>ショップ</h3>
   <button class="btn" onclick="expand()">倉庫拡張 +1 (5000)</button>
-</div>
-
-<div id="book" class="card hidden">
-  <h3>遊び方</h3>
-  <small>
-  ・1時間に1回GET<br>
-  ・強いモンスターほど収益UP<br>
-  ・金色は超レア
-  </small>
 </div>
 
 <div id="slot" class="card hidden">
@@ -124,7 +129,19 @@ let income=0;
 let set=null;
 let max=5;
 let nextGet=0;
-let login=1;
+
+// AI絵キャラ画像（例）
+const images={
+  白弱:"https://images.unsplash.com/photo-1611605698323-b1e99cfd37ea",
+  白中:"https://images.unsplash.com/photo-1607746882042-944635dfe10e",
+  白強:"https://images.unsplash.com/photo-1527980965255-d3b416303d12",
+  銀弱:"https://images.unsplash.com/photo-1506794778202-cad84cf45f1d",
+  銀中:"https://images.unsplash.com/photo-1544723795-3fb6469f5b39",
+  銀強:"https://images.unsplash.com/photo-1547425260-76bcadfb4f2c",
+  金弱:"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
+  金中:"https://images.unsplash.com/photo-1539571696357-5a69c17a67c6",
+  金強:"https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e"
+};
 
 const races=[
   {name:"弱",rate:1},
@@ -138,20 +155,18 @@ const colors=[
 ];
 
 function save(){
-  localStorage.setItem("hours",JSON.stringify({
-    money,monsters,set,max,nextGet,login
+  localStorage.setItem("hours_ai",JSON.stringify({
+    money,monsters,set,max,nextGet
   }));
 }
-
 function load(){
-  const d=JSON.parse(localStorage.getItem("hours"));
+  const d=JSON.parse(localStorage.getItem("hours_ai"));
   if(!d)return;
   money=d.money;
   monsters=d.monsters;
   set=d.set;
   max=d.max;
   nextGet=d.nextGet;
-  login=d.login;
 }
 
 function update(){
@@ -159,20 +174,30 @@ function update(){
   document.getElementById("income").textContent=income;
   document.getElementById("count").textContent=monsters.length;
   document.getElementById("max").textContent=max;
-  document.getElementById("setName").textContent=set?set.name:"なし";
 
-  const l=document.getElementById("list");
-  l.innerHTML="";
+  const list=document.getElementById("list");
+  list.innerHTML="";
   monsters.forEach((m,i)=>{
     const d=document.createElement("div");
     d.className="mon";
     d.innerHTML=`
-      ${m.name} (${m.power})
+      <img src="${m.img}">
+      <div>
+        ${m.name}<br>
+        力: ${m.power}
+      </div>
       <button onclick="equip(${i})">セット</button>
       <button onclick="drop(${i})">捨て</button>
     `;
-    l.appendChild(d);
+    list.appendChild(d);
   });
+
+  if(set){
+    document.getElementById("setName").textContent=set.name;
+    const img=document.getElementById("setImg");
+    img.src=set.img;
+    img.classList.remove("hidden");
+  }
 
   const now=Date.now();
   document.getElementById("cool").textContent=
@@ -188,10 +213,12 @@ function getMonster(){
   const color=colors[Math.floor(Math.random()*colors.length)];
   const iv=Math.floor(Math.random()*100)+1;
   const power=Math.floor(iv*race.rate*color.rate);
+  const key=color.name+race.name;
 
   monsters.push({
     name:`${color.name}${race.name}モンスター`,
-    power
+    power,
+    img:images[key]
   });
   save();update();
 }
@@ -201,35 +228,27 @@ function equip(i){
   income=set.power;
   save();update();
 }
-
 function drop(i){
   monsters.splice(i,1);
   save();update();
 }
-
 function expand(){
   if(money<5000)return alert("お金不足");
   money-=5000;
   max++;
   save();update();
 }
-
 function spin(){
   if(money<100000)return alert("お金不足");
   money-=100000;
   const r=Math.random();
-  let win=0;
-  if(r<0.01)win=50000000;
-  else if(r<0.05)win=6000000;
-  else if(r<0.2)win=2000000;
-  else win=800000;
+  let win=r<0.01?50000000:r<0.05?6000000:r<0.2?2000000:800000;
   money+=win;
   document.getElementById("slotView").textContent=win;
   update();
 }
-
 function openTab(id,b){
-  ["store","shop","book","slot"].forEach(t=>{
+  ["store","shop","slot"].forEach(t=>{
     document.getElementById(t).classList.add("hidden");
   });
   document.getElementById(id).classList.remove("hidden");
