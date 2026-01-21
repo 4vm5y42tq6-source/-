@@ -2,123 +2,162 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Hours</title>
+<title>放置勇者クエスト</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{margin:0;background:#f3f4f6;font-family:system-ui}
-h1{text-align:center}
-.card{background:#fff;margin:12px;padding:16px;border-radius:16px}
-.btn{width:100%;padding:16px;font-size:18px;border:none;border-radius:14px;background:#4b83b6;color:#fff}
-.tabs{display:flex;gap:6px;margin:0 12px}
-.tabs button{flex:1;padding:12px;border:none;border-radius:12px;background:#e5e7eb}
-.tabs .active{background:#4b83b6;color:#fff}
-.mon{display:flex;gap:10px;align-items:center;margin:8px 0}
-.mon img{width:56px;height:56px;border-radius:12px;object-fit:cover}
-.hidden{display:none}
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
+}
+h1 { color: #4dd0e1; }
+.panel {
+  background: #1e1e1e;
+  margin: 10px;
+  padding: 15px;
+  border-radius: 10px;
+}
+button {
+  background: #4dd0e1;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 16px;
+}
+.bar {
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bar-inner {
+  height: 18px;
+  background: #4caf50;
+}
+small { color: #aaa; }
 </style>
 </head>
-
 <body>
 
-<h1>The Hours</h1>
+<h1>⚔️ 放置勇者クエスト ⚔️</h1>
 
-<div class="card">
-金貨：<span id="money">0</span><br>
-収益：<span id="income">0</span>/秒<br>
-セット中：<span id="setName">なし</span>
+<div class="panel">
+  <h2>🧙‍♂️ 勇者</h2>
+  Lv <span id="lv">1</span><br>
+  EXP <span id="exp">0</span> / <span id="nextExp">10</span>
+  <div class="bar"><div id="expBar" class="bar-inner"></div></div>
+  攻撃力：<span id="atk">1</span>
 </div>
 
-<div class="card">
-<button class="btn" onclick="getMonster()">GETする</button>
+<div class="panel">
+  <h2>👾 モンスター</h2>
+  <div id="monsterName">スライムもどき</div>
+  HP <span id="mhp">10</span>
+  <div class="bar"><div id="hpBar" class="bar-inner" style="background:#e53935"></div></div>
 </div>
 
-<div class="tabs">
-<button class="active" onclick="openTab('store',this)">倉庫</button>
-<button onclick="openTab('dex',this)">図鑑</button>
+<div class="panel">
+  💰 ゴールド：<span id="gold">0</span><br><br>
+  <button onclick="rebirth()">🔄 転生（Lv10〜）</button>
 </div>
 
-<div id="store" class="card">
-<h3>倉庫</h3>
-<div id="storeList"></div>
-</div>
-
-<div id="dex" class="card hidden">
-<h3>モンスター図鑑（64体）</h3>
-<div id="dexList"></div>
+<div class="panel">
+  <small>
+    ※このゲームはドラクエ風のオリジナル放置ゲームです  
+  </small>
 </div>
 
 <script>
-let money=0,income=0,set=null;
-let store=[];
+let hero = {
+  lv: 1,
+  exp: 0,
+  nextExp: 10,
+  atk: 1,
+  rebirth: 0
+};
 
-// ===== モンスター64体定義 =====
-const races=[
-"スライム","けもの","ドラゴン","あくま",
-"アンデッド","マシン","しょくぶつ","エレメント"
+let gold = 0;
+
+let monster = {
+  name: "",
+  maxHp: 10,
+  hp: 10,
+  exp: 5,
+  gold: 3
+};
+
+const monsters = [
+  {name:"スライムもどき", hp:10, exp:5, gold:3},
+  {name:"ゴブリン風", hp:20, exp:10, gold:6},
+  {name:"ドラキー似", hp:40, exp:20, gold:12},
+  {name:"メタルっぽい影", hp:80, exp:50, gold:30, rare:true},
+  {name:"魔王の手下？", hp:200, exp:150, gold:100, legend:true}
 ];
 
-const monsters=[];
-let id=0;
-races.forEach(r=>{
-  for(let i=1;i<=8;i++){
-    monsters.push({
-      id:id++,
-      name:`${r}★${i}`,
-      race:r,
-      star:i,
-      power:i*10,
-      img:"https://via.placeholder.com/128?text="+encodeURIComponent(r+"★"+i)
-    });
+function spawnMonster(){
+  let m = monsters[Math.floor(Math.random()*monsters.length)];
+  monster = {
+    name: m.name,
+    maxHp: m.hp,
+    hp: m.hp,
+    exp: m.exp,
+    gold: m.gold
+  };
+  updateUI();
+}
+
+function attack(){
+  monster.hp -= hero.atk;
+  if(monster.hp <= 0){
+    hero.exp += monster.exp;
+    gold += monster.gold;
+    levelUp();
+    spawnMonster();
   }
-});
-
-// ===== 処理 =====
-function getMonster(){
-  const m=monsters[Math.floor(Math.random()*monsters.length)];
-  store.push({...m});
-  render();
-}
-function equip(i){
-  set=store[i];
-  income=set.power;
-  document.getElementById("setName").textContent=set.name;
-}
-function render(){
-  document.getElementById("money").textContent=money;
-  document.getElementById("income").textContent=income;
-
-  const s=document.getElementById("storeList");
-  s.innerHTML="";
-  store.forEach((m,i)=>{
-    s.innerHTML+=`
-    <div class="mon">
-      <img src="${m.img}">
-      <div>${m.name}<br>力:${m.power}</div>
-      <button onclick="equip(${i})">セット</button>
-    </div>`;
-  });
-
-  const d=document.getElementById("dexList");
-  d.innerHTML="";
-  monsters.forEach(m=>{
-    d.innerHTML+=`
-    <div class="mon">
-      <img src="${m.img}">
-      <div>${m.name}</div>
-    </div>`;
-  });
+  updateUI();
 }
 
-function openTab(id,b){
-  document.getElementById("store").classList.add("hidden");
-  document.getElementById("dex").classList.add("hidden");
-  document.getElementById(id).classList.remove("hidden");
-  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active");
+function levelUp(){
+  while(hero.exp >= hero.nextExp){
+    hero.exp -= hero.nextExp;
+    hero.lv++;
+    hero.nextExp = Math.floor(hero.nextExp * 1.5);
+    hero.atk++;
+  }
 }
 
-setInterval(()=>{money+=income;render()},1000);
-render();
+function rebirth(){
+  if(hero.lv < 10){
+    alert("Lv10以上で転生できます！");
+    return;
+  }
+  hero.rebirth++;
+  hero.lv = 1;
+  hero.exp = 0;
+  hero.nextExp = 10;
+  hero.atk = 1 + hero.rebirth * 2;
+  gold = 0;
+  alert("転生成功！ 攻撃力が大幅アップ！");
+}
+
+function updateUI(){
+  document.getElementById("lv").textContent = hero.lv;
+  document.getElementById("exp").textContent = hero.exp;
+  document.getElementById("nextExp").textContent = hero.nextExp;
+  document.getElementById("atk").textContent = hero.atk;
+  document.getElementById("gold").textContent = gold;
+
+  document.getElementById("monsterName").textContent = monster.name;
+  document.getElementById("mhp").textContent = monster.hp;
+
+  document.getElementById("expBar").style.width =
+    (hero.exp / hero.nextExp * 100) + "%";
+  document.getElementById("hpBar").style.width =
+    (monster.hp / monster.maxHp * 100) + "%";
+}
+
+spawnMonster();
+setInterval(attack, 1000); // 完全放置
 </script>
 
 </body>
